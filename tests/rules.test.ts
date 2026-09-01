@@ -50,14 +50,33 @@ function fs(ctx: RulesTestContext): Firestore {
 }
 
 beforeAll(async () => {
-  env = await initializeTestEnvironment({
-    projectId: 'demo-aperture',
-    firestore: {
-      rules: readFileSync('firestore.rules', 'utf8'),
-      host: '127.0.0.1',
-      port: 8080,
-    },
-  });
+  // Follow whatever port firebase.json chose, via the env var that
+  // `firebase emulators:exec` sets. Hardcoding a port here means the suite
+  // silently talks to whatever else happens to be listening on it — port 8080
+  // in particular is contested by half the dev tools ever written.
+  const hostPort = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8787';
+  const [host, portText] = hostPort.split(':');
+
+  try {
+    env = await initializeTestEnvironment({
+      projectId: 'demo-aperture',
+      firestore: {
+        rules: readFileSync('firestore.rules', 'utf8'),
+        host,
+        port: Number(portText),
+      },
+    });
+  } catch (err) {
+    // A 404 from the rules endpoint means something IS listening there, but it
+    // is not the Firestore emulator. Say so, rather than leaving the next
+    // person to decode `{"detail":"Not Found"}`.
+    throw new Error(
+      `Could not load rules into the Firestore emulator at ${hostPort}. ` +
+        `If this is a 404, another server holds that port — check with ` +
+        `\`Get-NetTCPConnection -LocalPort ${portText}\` and change the ` +
+        `firestore port in firebase.json. Original: ${String(err)}`,
+    );
+  }
 
   alice = fs(env.authenticatedContext('alice'));
   bob = fs(env.authenticatedContext('bob'));

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { GoogleGenAI, type Content } from '@google/genai';
+import { GoogleGenAI, Type, type Content, type Schema } from '@google/genai';
 
 import { getSecret } from './secrets';
 import { LIMITS, MODELS, type ConversationMode } from '../config';
@@ -182,4 +182,155 @@ export async function streamChat(
 /** Convert stored turns into the SDK's Content shape. */
 export function toContents(turns: { role: 'user' | 'model'; content: string }[]): Content[] {
   return turns.map((t) => ({ role: t.role, parts: [{ text: t.content }] }));
+}
+
+// ─── Session summary (structured output) ─────────────────────────────────────
+
+/**
+ * One schema, four features.
+ *
+ * This single call produces the session summary, the mood ribbon, the theme
+ * constellation, and the input to the weekly chapter. Asking for structured
+ * output rather than prose means no parsing, no "sometimes it adds a preamble",
+ * and typed data straight into Firestore.
+ */
+const INSIGHT_SCHEMA: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING, description: 'Three to six words. No colon, no quotes.' },
+    summary: {
+      type: Type.STRING,
+      description: 'Two or three sentences, second person, plain language.',
+    },
+    bullets: {
+      type: Type.ARRAY,
+      description: 'Three to five key points, each one short sentence.',
+      items: { type: Type.STRING },
+    },
+    openLoops: {
+      type: Type.ARRAY,
+      description: 'Unresolved threads worth returning to. Empty array if none.',
+      items: { type: Type.STRING },
+    },
+    mood: {
+      type: Type.OBJECT,
+      properties: {
+        valence: { type: Type.NUMBER, description: '-1 heavy … 1 light' },
+        energy: { type: Type.NUMBER, description: '0 flat … 1 charged' },
+        label: { type: Type.STRING, description: 'One or two words for the feeling.' },
+      },
+      required: ['valence', 'energy', 'label'],
+      propertyOrdering: ['valence', 'energy', 'label'],
+    },
+    emotions: {
+      type: Type.ARRAY,
+      description: 'Up to four, strongest first.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING },
+          intensity: { type: Type.NUMBER, description: '0 … 1' },
+        },
+        required: ['name', 'intensity'],
+        propertyOrdering: ['name', 'intensity'],
+      },
+    },
+    themes: {
+      type: Type.ARRAY,
+      description: 'Two to five lowercase single-word or hyphenated tags.',
+      items: { type: Type.STRING },
+    },
+    entities: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING },
+          type: { type: Type.STRING, enum: ['person', 'place', 'project', 'concept'] },
+        },
+        required: ['name', 'type'],
+        propertyOrdering: ['name', 'type'],
+      },
+    },
+    suggestedExperiment: {
+      type: Type.STRING,
+      description: 'One small, concrete thing to try. A sentence.',
+    },
+  },
+  required: [
+    'title',
+    'summary',
+    'bullets',
+    'openLoops',
+    'mood',
+    'emotions',
+    'themes',
+    'entities',
+    'suggestedExperiment',
+  ],
+  propertyOrdering: [
+    'title',
+    'summary',
+    'bullets',
+    'openLoops',
+    'mood',
+    'emotions',
+    'themes',
+    'entities',
+    'suggestedExperiment',
+  ],
+};
+
+const SUMMARIZE_INSTRUCTION = `
+You are closing out a journaling session. Read the conversation and distil it.
+
+Write for the person who wrote it, in second person, in their register. Be
+specific — name the actual things they talked about rather than describing the
+shape of the conversation. "You kept circling back to whether the move is about
+the job or about leaving" beats "You explored a personal decision".
+
+Do not praise. Do not encourage. Do not add advice that was not asked for. The
+suggested experiment should be small enough to do tomorrow.
+
+Themes are for grouping sessions over months, so keep them general and reusable:
+"work", "sleep", "family", "creative-block" — not "tuesday-standup".
+
+${SAFETY_CLAUSE}`.trim();
+
+export interface SummaryResult {
+  raw: unknown;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
+ * Summarise a closed session. Returns PARSED BUT UNVALIDATED JSON — the caller
+ * runs it through a Zod schema, because a schema-constrained model is a strong
+ * expectation and not a guarantee.
+ */
+export async function summarizeSession(
+  turns: { role: 'user' | 'model'; content: string }[],
+): Promise<SummaryResult> {
+  const ai = await client();
+
+  const response = await ai.models.generateContent({
+    model: MODELS.synthesis,
+    contents: toContents(turns),
+    config: {
+      systemInstruction: SUMMARIZE_INSTRUCTION,
+      responseMimeType: 'application/json',
+      responseSchema: INSIGHT_SCHEMA,
+      temperature: 0.4,
+      maxOutputTokens: 1600,
+    },
+  });
+
+  const text = response.text;
+  if (!text) throw new Error('EMPTY_SUMMARY');
+
+  return {
+    raw: JSON.parse(text),
+    inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
+    outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+  };
 }

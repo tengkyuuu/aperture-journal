@@ -48,3 +48,44 @@ export const SummarizeRequestSchema = z.strictObject({
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatTurn = z.infer<typeof ChatTurnSchema>;
 export type Mode = z.infer<typeof ModeSchema>;
+
+/**
+ * Model OUTPUT is also a trust boundary.
+ *
+ * `responseSchema` makes the shape a strong expectation, not a guarantee — and
+ * this object goes straight into Firestore and then straight into the UI. A
+ * `valence` of 9000 would blow out the mood ribbon; a 4,000-word "title" would
+ * blow out the timeline. Clamp and bound it here rather than discovering it on
+ * stage.
+ */
+export const InsightsSchema = z.strictObject({
+  title: z.string().min(1).max(120),
+  summary: z.string().min(1).max(2_000),
+  bullets: z.array(z.string().max(400)).max(8).default([]),
+  openLoops: z.array(z.string().max(400)).max(8).default([]),
+  mood: z.strictObject({
+    valence: z.number().min(-1).max(1).catch(0),
+    energy: z.number().min(0).max(1).catch(0.5),
+    label: z.string().min(1).max(40),
+  }),
+  emotions: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1).max(40),
+        intensity: z.number().min(0).max(1).catch(0.5),
+      }),
+    )
+    .max(8)
+    .default([]),
+  themes: z.array(z.string().min(1).max(40)).max(10).default([]),
+  entities: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1).max(80),
+        type: z.enum(['person', 'place', 'project', 'concept']),
+      }),
+    )
+    .max(20)
+    .default([]),
+  suggestedExperiment: z.string().max(500).default(''),
+});

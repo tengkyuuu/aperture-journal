@@ -1,22 +1,316 @@
 @import "tailwindcss";
 
-/* Day 1 is deliberately unstyled. The design system lands on Day 2 —
-   see docs/05-UI-UX-SPEC.md. Right now the only job is proving the pipe. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   QUIET INK — the design system
+   Contract: docs/05-UI-UX-SPEC.md
 
+   Three layers: primitives → semantic tokens → Tailwind utilities.
+   Components only ever reference the semantic layer, so a palette change is
+   one edit here and nothing else in the codebase moves.
+
+   Theme handling covers three states, not two:
+     :root                                    → the complete LIGHT palette
+     @media dark + :not([data-theme=light])   → system dark, unless overridden
+     [data-theme=dark]                        → explicit choice wins both ways
+   No colour is ever defined only inside a media query.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ── Primitives ─────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink-950: #0b0b0c;
+  --ink-900: #141416;
+  --ink-800: #1c1c1f;
+  --ink-700: #26262b;
+  --ink-600: #3a3a40;
+  --ink-400: #6b6b75;
+  --ink-300: #85858f;
+  --ink-200: #a9a9b4;
+
+  --paper-50: #faf8f4;
+  --paper-100: #f3efe7;
+  --paper-200: #e7e1d5;
+  --paper-300: #d6cebd;
+
+  --indigo-600: #5561c4;
+  --indigo-400: #8b99e6;
+  --indigo-wash-light: #ecedfa;
+  --indigo-wash-dark: #1b1e33;
+
+  --ember-600: #a85f35;
+  --ember-400: #c8825a;
+  --sage-600: #4e7f60;
+  --sage-400: #6e9b7a;
+  --clay-600: #b25c54;
+  --clay-400: #c4736b;
+  --danger-600: #c0483f;
+  --danger-400: #d0574e;
 }
 
+/* ── Semantic: LIGHT (the complete set lives on bare :root) ─────────────── */
+:root {
+  --bg-canvas: var(--paper-50);
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-sunken: var(--paper-100);
+
+  --line-subtle: var(--paper-200);
+  --line-strong: var(--paper-300);
+
+  --fg-primary: var(--ink-900);
+  --fg-secondary: var(--ink-600);
+  --fg-muted: var(--ink-400);
+  --fg-on-accent: #ffffff;
+
+  --accent: var(--indigo-600);
+  --accent-wash: var(--indigo-wash-light);
+  --sealed: var(--ember-600);
+  --danger: var(--danger-600);
+  --positive: var(--sage-600);
+  --negative: var(--clay-600);
+
+  /* Ambient mood tint. Background only — text tokens never shift, so contrast
+     cannot degrade no matter what the week's mood turns out to be. */
+  --mood-tint: transparent;
+
+  --shadow-ambient: 0 1px 2px rgb(20 20 22 / 0.04), 0 8px 24px -14px rgb(20 20 22 / 0.14);
+
+  color-scheme: light;
+}
+
+/* ── Semantic: DARK via system preference ───────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0b0c;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg-canvas: var(--ink-950);
+    --bg-surface: var(--ink-900);
+    --bg-elevated: var(--ink-800);
+    --bg-sunken: #101012;
+
+    --line-subtle: var(--ink-700);
+    --line-strong: var(--ink-600);
+
+    --fg-primary: var(--paper-100);
+    --fg-secondary: var(--ink-200);
+    --fg-muted: var(--ink-300);
+    --fg-on-accent: var(--ink-950);
+
+    --accent: var(--indigo-400);
+    --accent-wash: var(--indigo-wash-dark);
+    --sealed: var(--ember-400);
+    --danger: var(--danger-400);
+    --positive: var(--sage-400);
+    --negative: var(--clay-400);
+
+    /* Heavy shadows read as smudges on a near-black ground. Use a hairline. */
+    --shadow-ambient: none;
+
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+/* ── Semantic: DARK via explicit choice ─────────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg-canvas: var(--ink-950);
+  --bg-surface: var(--ink-900);
+  --bg-elevated: var(--ink-800);
+  --bg-sunken: #101012;
+
+  --line-subtle: var(--ink-700);
+  --line-strong: var(--ink-600);
+
+  --fg-primary: var(--paper-100);
+  --fg-secondary: var(--ink-200);
+  --fg-muted: var(--ink-300);
+  --fg-on-accent: var(--ink-950);
+
+  --accent: var(--indigo-400);
+  --accent-wash: var(--indigo-wash-dark);
+  --sealed: var(--ember-400);
+  --danger: var(--danger-400);
+  --positive: var(--sage-400);
+  --negative: var(--clay-400);
+
+  --shadow-ambient: none;
+
+  color-scheme: dark;
+}
+
+/* ── Tailwind utility mapping ───────────────────────────────────────────── */
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-sunken: var(--bg-sunken);
+
+  --color-line: var(--line-subtle);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--fg-primary);
+  --color-ink-2: var(--fg-secondary);
+  --color-ink-3: var(--fg-muted);
+  --color-on-accent: var(--fg-on-accent);
+
+  --color-accent: var(--accent);
+  --color-accent-wash: var(--accent-wash);
+  --color-sealed: var(--sealed);
+  --color-danger: var(--danger);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --radius-control: 6px;
+  --radius-card: 12px;
+  --radius-sheet: 20px;
+
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    background-image: var(--mood-tint);
+    color: var(--fg-primary);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Every interactive element gets a visible focus state. Non-negotiable. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: var(--accent-wash);
+    color: var(--fg-primary);
+  }
+
+  /* A journal is prose. Give it a book's measure and leading. */
+  .prose-journal {
+    font-family: var(--font-newsreader), Georgia, serif;
+    font-size: 18px;
+    line-height: 1.72;
+    letter-spacing: 0.002em;
+    max-width: 68ch;
+  }
+
+  .label {
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Scrollbars that do not shout. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Streaming text: each new word group fades up as it arrives. */
+  @keyframes reveal-word {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* The Distillation. A breathing dot, not a spinner — stillness reads calm. */
+  @keyframes breathe {
+    0%,
+    100% {
+      opacity: 0.25;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes caret-blink {
+    0%,
+    45% {
+      opacity: 1;
+    }
+    50%,
+    95% {
+      opacity: 0.15;
+    }
+  }
+
+  .animate-reveal-word {
+    animation: reveal-word 0.28s var(--ease-emphasized) both;
+  }
+  .animate-breathe {
+    animation: breathe 1.4s ease-in-out infinite;
+  }
+  .animate-rise-in {
+    animation: rise-in 0.42s var(--ease-emphasized) both;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s var(--ease-emphasized) both;
+  }
+  .animate-caret {
+    animation: caret-blink 1.1s steps(1, end) infinite;
+  }
+}
+
+/* Reduced motion: instant state changes, but nothing disappears. The Closing
+   Ritual still shows its copy — it just stops being a performance. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

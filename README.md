@@ -37,7 +37,7 @@
 | [04 · Features](docs/04-FEATURES.md) | Core requirements, the four enhancements, and the cut list. |
 | [05 · UI/UX Spec](docs/05-UI-UX-SPEC.md) | "Quiet Ink" design system, tokens, eight screens, three signature moments, accessibility contract. |
 | [06 · Sprint Runbook](docs/06-SPRINT-RUNBOOK.md) | Hour-by-hour 4-day plan with hard gates, demo script, and submission checklist. |
-| [07 · Gate 1 Evidence](docs/07-GATE-1-EVIDENCE.md) | What has actually been verified, what is outstanding, and the deliberately deferred gaps. |
+| [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md) | What has been verified per gate, what is outstanding, and the deliberate deviations. |
 
 ---
 
@@ -76,12 +76,16 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 
 ## Status
 
-**Day 1 complete — the trust boundary is in.** Auth, secrets, path-scoped tenancy, rate
-limiting, the AI call ledger, injection heuristics, and security headers are implemented;
-the isolation suite is green and the `server-only` guard is proven to fail the build.
+**Days 1-2 complete.** The trust boundary is in - auth, secrets, path-scoped tenancy, rate
+limiting, the AI call ledger, injection heuristics, security headers - and so is the product
+surface: the Quiet Ink design system, the three-pane shell, the conversation canvas with
+streamed word reveal, the command palette, and the Closing Ritual driven by Gemini structured
+output.
 
-Still needed before Gate 1 fully closes: a Google Cloud project, the secret, and a live
-sign-in → chat → persist run. See [07 · Gate 1 Evidence](docs/07-GATE-1-EVIDENCE.md).
+Verified locally: 26/26 isolation tests, clean build and lint, route protection, CSRF
+rejection, forged-cookie rejection, and no secrets in the client bundle.
 
-Day 2 (design system and the conversation canvas) has not started. The current UI is
-deliberately unstyled.
+Still needed: a Google Cloud project for the live sign-in, chat and distil run. See
+[07 - Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
+
+Day 3 next: the Zero-Knowledge Vault, Privacy Ledger, Emotional Weather, and Ask Your Past.
