@@ -1,0 +1,50 @@
+# Firebase App Hosting runtime configuration.
+#
+# NOTE WHAT IS ABSENT: GEMINI_API_KEY.
+#
+# App Hosting can inject Secret Manager values as environment variables here,
+# and for most apps that is the right call. We deliberately do not, for two
+# reasons: fetching the key through the Secret Manager client at runtime makes
+# the dependency explicit and auditable, and a key rotation then takes effect
+# within one cache TTL instead of requiring a redeploy.
+#
+# See lib/server/secrets.ts.
+
+runConfig:
+  minInstances: 0
+  maxInstances: 3
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: GOOGLE_CLOUD_PROJECT
+    value: CHANGE_ME_PROJECT_ID
+    availability:
+      - RUNTIME
+
+  - variable: GEMINI_SECRET_NAME
+    value: GEMINI_API_KEY
+    availability:
+      - RUNTIME
+
+  # Public by design. These ship in the browser bundle, identify the project
+  # rather than authorise anything, and are protected by referrer restrictions,
+  # Firestore rules, and App Check. They are config, not credentials.
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: CHANGE_ME_WEB_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: CHANGE_ME_PROJECT_ID.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: CHANGE_ME_PROJECT_ID
+    availability:
+      - BUILD
+      - RUNTIME

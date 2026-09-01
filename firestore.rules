@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APERTURE — Firestore security rules
+//
+// POSTURE, in one sentence:
+//   A client may READ its own subtree and may WRITE NOTHING.
+//
+// Every mutation goes through a server route that re-derives the uid from a
+// verified session cookie, validates the body with Zod, checks the rate limit,
+// and writes an entry to the per-user AI call ledger. The Admin SDK bypasses
+// these rules entirely — which is exactly why the server never accepts a uid
+// from client input. See lib/server/db.ts.
+//
+// These rules are still load-bearing: the Firebase web config is public by
+// design, so anyone can point a client SDK at this database. These rules are
+// the only thing standing between that client and another user's journal.
+// ─────────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    match /users/{uid} {
+      allow read:  if isOwner(uid);
+      allow write: if false;
+
+      match /sessions/{sessionId} {
+        allow read:  if isOwner(uid);
+        allow write: if false;
+
+        match /messages/{messageId} {
+          allow read:  if isOwner(uid);
+          allow write: if false;
+        }
+      }
+
+      match /chapters/{isoWeek}        { allow read: if isOwner(uid); allow write: if false; }
+      match /ai_calls/{callId}         { allow read: if isOwner(uid); allow write: if false; }
+      match /security_events/{eventId} { allow read: if isOwner(uid); allow write: if false; }
+    }
+
+    // Deny by default. Anything not matched above is unreachable by any client.
+    // A subcollection someone forgets to add here fails CLOSED, not open.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

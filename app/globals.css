@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Day 1 is deliberately unstyled. The design system lands on Day 2 —
+   see docs/05-UI-UX-SPEC.md. Right now the only job is proving the pipe. */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b0b0c;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
