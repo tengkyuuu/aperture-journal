@@ -1,5 +1,9 @@
 # Data Model, Security Rules & Isolation Tests
 
+> **Status: implemented.** This document now describes shipped code, not a plan.
+> Source of truth: [`firestore.rules`](../firestore.rules), [`lib/server/db.ts`](../lib/server/db.ts),
+> [`tests/rules.test.ts`](../tests/rules.test.ts).
+
 The "zero cross-user leakage" requirement is won or lost here. Everything is **path-scoped**:
 a forgotten `where` clause fails *open*, a wrong path fails *closed*.
 
@@ -11,29 +15,22 @@ a forgotten `where` clause fails *open*, a wrong path fails *closed*.
 /users/{uid}                              profile
     uid, email, displayName, photoURL, createdAt, lastSeenAt
     settings: { defaultMode, theme, reducedMotion }
-    vault:    { salt: string, check: string, enabledAt }   ← salt is NOT secret
-    quota:    { day: '2026-09-01', chatCalls: 12, tokens: 48210 }
+    vault:    { salt, check, enabledAt }        ← salt is NOT secret
+    quota:    { day, chatCalls, tokens }        ← server-managed, transactional
 
   /sessions/{sessionId}
       title, mode, startedAt, endedAt, status: 'open'|'closed',
       messageCount, sealed: boolean,
-      summary?: string,
-      insights?: { mood, emotions[], themes[], entities[], openLoops[], suggestedExperiment },
-      embedding?: number[]                                 ← 768 dims, absent when sealed
+      summary?, insights?, embedding?           ← all absent when sealed
 
     /messages/{messageId}
         role: 'user'|'model', createdAt, sealed: boolean,
         content?: string        ← present only when sealed === false
-        cipher?: string         ← present only when sealed === true (base64 iv||ciphertext)
+        cipher?: string         ← present only when sealed === true
 
-  /chapters/{isoWeek}           weekly synthesis: narrative, arc, openLoops[], generatedAt
+  /chapters/{isoWeek}           weekly synthesis
   /ai_calls/{callId}            privacy ledger (append-only, client-unwritable)
-      at, route, model, purpose, inputTokens, outputTokens, estCostUsd,
-      latencyMs, dataClasses: string[], sealedExcluded: number
-  /security_events/{eventId}    injectionSuspected | rateLimited | authAnomaly
-      at, kind, severity, detail, sessionId?
-
-/system/{...}                   admin-only. No client access, ever.
+  /security_events/{eventId}    injection suspicions, rate limits, auth anomalies
 ```
 
 **Invariant:** a `sealed: true` document never carries a `content` field, and its parent
@@ -43,175 +40,111 @@ an `if`.
 
 ---
 
-## 2. `firestore.rules`
+## 2. The rules posture, in one sentence
+
+> **A client may READ its own subtree and may WRITE NOTHING.**
+
+That single sentence is the entire authorization model, which is exactly why it is defensible.
+Every mutation goes through a server route that re-derives the uid from a verified session
+cookie, validates with Zod, checks the quota, and writes a ledger row.
+
+See [`firestore.rules`](../firestore.rules) for the full file. The shape:
 
 ```javascript
-rules_version = '2';
+function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
 
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    function signedIn()      { return request.auth != null; }
-    function isOwner(uid)    { return signedIn() && request.auth.uid == uid; }
-    function unchanged(f)    { return request.resource.data[f] == resource.data[f]; }
-
-    match /users/{uid} {
-      // Read your own profile. Nobody else's. Ever.
-      allow read:   if isOwner(uid);
-
-      // Create only a document whose uid field matches your own token — no spoofing.
-      allow create: if isOwner(uid)
-                    && request.resource.data.uid == uid
-                    && request.resource.data.keys().hasOnly(
-                         ['uid','email','displayName','photoURL','createdAt','lastSeenAt','settings']);
-
-      // Users may change settings and nothing else. vault/quota are server-managed.
-      allow update: if isOwner(uid)
-                    && unchanged('uid')
-                    && request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['settings','lastSeenAt']);
-
-      allow delete: if false;   // account deletion goes through the server route
-
-      match /sessions/{sessionId} {
-        allow read:  if isOwner(uid);
-        allow write: if false;                 // server-only: validated + ledgered
-
-        match /messages/{messageId} {
-          allow read:  if isOwner(uid);
-          allow write: if false;
-        }
-      }
-
-      match /chapters/{isoWeek}        { allow read: if isOwner(uid); allow write: if false; }
-      match /ai_calls/{callId}         { allow read: if isOwner(uid); allow write: if false; }
-      match /security_events/{eventId} { allow read: if isOwner(uid); allow write: if false; }
-    }
-
-    // Deny by default. Anything not matched above is unreachable.
-    match /{document=**} { allow read, write: if false; }
-  }
+match /users/{uid} {
+  allow read:  if isOwner(uid);
+  allow write: if false;
+  // …explicit match blocks per subcollection, all read-own / write-never…
 }
+
+match /{document=**} { allow read, write: if false; }   // deny by default
 ```
 
-**Posture:** *read-scoped-by-rules, write-through-server.* Clients get realtime timeline
-updates for free; every mutation is Zod-validated, rate-limited, and ledgered on the server.
+Subcollections are matched **explicitly** rather than with a recursive wildcard. A
+subcollection someone forgets to add therefore fails *closed* rather than inheriting its
+parent's read permission.
 
-**The Admin SDK bypasses all of the above.** So every server data access re-derives the uid
-from the verified cookie:
+**These rules are load-bearing even though the app currently reads server-side.** The Firebase
+web config is public by design, so anyone can point a client SDK at this database. These rules
+are the only thing standing between that client and another user's journal.
+
+### Why client writes are denied entirely
+
+An earlier draft allowed a validated self-create of the profile document. Full deny is better:
+it is one rule instead of five, it is one sentence to explain, and it removes the whole class
+of "the rule was almost right" bugs. The cost is a server round-trip for settings changes,
+which is not a cost worth caring about.
+
+### The Admin SDK bypasses all of this
+
+Which is why [`lib/server/db.ts`](../lib/server/db.ts) exists and why it looks the way it does:
 
 ```ts
-// lib/server/db.ts
-import 'server-only';
-
-/** SECURITY PRECONDITION: `uid` MUST come from requireUid(), never from client input. */
-export function userDoc(uid: string)     { return db.doc(`users/${uid}`); }
-export function sessions(uid: string)    { return db.collection(`users/${uid}/sessions`); }
-export function messages(uid: string, s: string) {
-  return db.collection(`users/${uid}/sessions/${s}/messages`);
-}
+/** SECURITY PRECONDITION: `uid` MUST be the return value of requireUid(). */
+export function sessionsCol(uid: string) { return db().collection(`users/${uid}/sessions`); }
 ```
 
-There is no function in the codebase that accepts a collection path from a caller. That is the
-whole defense, and it is boring on purpose.
+There is deliberately **no exported helper that accepts a raw collection path**, and no request
+schema anywhere in the codebase contains a `uid` field. Document IDs that arrive from a client
+pass through `assertSafeId()` before being interpolated into a path.
 
 ---
 
-## 3. The isolation test suite — your single best artifact
+## 3. The isolation suite
 
-`tests/rules.test.ts`, run against the Firestore emulator with `@firebase/rules-unit-testing`.
-Screenshot this green. It converts "we have isolation" from a claim into evidence.
+[`tests/rules.test.ts`](../tests/rules.test.ts) — 26 tests against the Firestore emulator using
+the real rules file, not a copy.
 
-```ts
-import { initializeTestEnvironment, assertFails, assertSucceeds }
-  from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
-
-let env, alice, bob, anon;
-
-beforeAll(async () => {
-  env = await initializeTestEnvironment({
-    projectId: 'aperture-rules-test',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8') },
-  });
-  alice = env.authenticatedContext('alice').firestore();
-  bob   = env.authenticatedContext('bob').firestore();
-  anon  = env.unauthenticatedContext().firestore();
-});
-
-describe('cross-user isolation', () => {
-  it('alice cannot read bob\'s profile', async () =>
-    assertFails(getDoc(doc(alice, 'users/bob'))));
-
-  it('alice cannot read bob\'s sessions', async () =>
-    assertFails(getDocs(collection(alice, 'users/bob/sessions'))));
-
-  it('alice cannot read bob\'s messages', async () =>
-    assertFails(getDoc(doc(alice, 'users/bob/sessions/s1/messages/m1'))));
-
-  it('alice cannot read bob\'s AI ledger', async () =>
-    assertFails(getDoc(doc(alice, 'users/bob/ai_calls/c1'))));
-
-  it('alice cannot write into bob\'s tree', async () =>
-    assertFails(setDoc(doc(alice, 'users/bob/sessions/s1'), { title: 'pwned' })));
-});
-
-describe('unauthenticated access', () => {
-  it('reads nothing', async () => assertFails(getDoc(doc(anon, 'users/alice'))));
-  it('writes nothing', async () => assertFails(setDoc(doc(anon, 'users/alice'), {})));
-});
-
-describe('write-through-server posture', () => {
-  it('alice cannot write her OWN session directly', async () =>
-    assertFails(setDoc(doc(alice, 'users/alice/sessions/s1'), { title: 'x' })));
-
-  it('alice cannot forge her own AI ledger entry', async () =>
-    assertFails(setDoc(doc(alice, 'users/alice/ai_calls/c1'), { estCostUsd: 0 })));
-});
-
-describe('anti-spoofing on profile create', () => {
-  it('alice cannot create a profile claiming uid=bob', async () =>
-    assertFails(setDoc(doc(alice, 'users/alice'), { uid: 'bob', email: 'a@x.com' })));
-
-  it('alice can create her own valid profile', async () =>
-    assertSucceeds(setDoc(doc(alice, 'users/alice'),
-      { uid: 'alice', email: 'a@x.com', displayName: 'A', photoURL: '',
-        createdAt: new Date(), lastSeenAt: new Date(), settings: {} })));
-});
-
-describe('deny-by-default', () => {
-  it('an unmatched collection is unreachable', async () =>
-    assertFails(getDoc(doc(alice, 'system/config'))));
-});
+```bash
+npm run test:rules
 ```
 
-Run: `firebase emulators:exec --only firestore "npx vitest run tests/rules.test.ts"`
+| Group | What it proves |
+|---|---|
+| **Positive control** (4) | Alice *can* read her own profile, sessions, messages, ledger. Without these, a rules file denying everything would "pass" the suite. |
+| **Cross-user isolation** (11) | Alice cannot read or list Bob's profile, sessions, messages, ledger, security events, or chapters; cannot write into or delete from his tree; and the same holds in reverse. |
+| **Unauthenticated** (2) | Reads nothing, writes nothing. |
+| **Write-through-server** (7) | Alice cannot write her *own* session or messages, cannot forge a ledger entry, cannot delete her own security events, cannot raise her own quota, cannot create a profile at all. |
+| **Deny by default** (2) | An unmatched top-level collection and an unmatched subcollection are both unreachable. |
 
-**Gate rule for the sprint: do not start Day 2 until this suite is green.**
+The ledger test is the subtle one: if a user could write their own `ai_calls` rows, the audit
+trail would be worthless as evidence of what was actually sent to the model. Repudiation
+defence only works if the subject cannot edit the record.
+
+Seeding runs through `withSecurityRulesDisabled`, exactly as the Admin SDK behaves in
+production — so the negative tests run against documents that genuinely exist and are
+genuinely readable by their owner.
+
+> **Gate rule: Day 2 does not start until this suite is green.**
+
+### Requirement: Java
+
+The Firestore emulator is a Java process. `npm run test:rules` fails with
+`Could not spawn 'java -version'` until a JRE is installed and on `PATH`.
 
 ---
 
 ## 4. Server-side guardrails beyond rules
 
-| Control | Implementation |
+| Control | Where |
 |---|---|
-| Identity | `requireUid()` — `verifySessionCookie(cookie, true)`; throws 401 otherwise |
-| Input validation | Zod schema per route; `.strict()` so unknown keys are rejected |
-| Rate limit | Firestore transaction on `/users/{uid}.quota`; daily cap on chat calls and tokens |
-| Token ceiling | `maxOutputTokens` on every Gemini call |
-| Origin check | Mutating routes verify `Origin` matches the deployed host |
-| Ledger | Every model call writes `/users/{uid}/ai_calls/{id}` before returning |
-| Logging | Redaction allowlist; message content, prompts, outputs and tokens are never logged |
-| Errors | Client sees a generic code; the log holds the detail |
+| Identity | [`lib/server/auth.ts`](../lib/server/auth.ts) — `verifySessionCookie(cookie, true)`, plus `auth_time` freshness when minting |
+| Input validation | [`lib/shared/schemas.ts`](../lib/shared/schemas.ts) — `z.strictObject`, unknown keys rejected, sizes bounded |
+| CSRF | `SameSite=Lax` cookie **plus** an explicit `Origin` check in [`lib/server/http.ts`](../lib/server/http.ts) |
+| Rate limit | [`lib/server/ratelimit.ts`](../lib/server/ratelimit.ts) — Firestore transaction on the quota field, reconciled against real usage after the call |
+| Token ceiling | `LIMITS.maxOutputTokens` on every Gemini call |
+| Ledger | [`lib/server/ledger.ts`](../lib/server/ledger.ts) — every model call, before the response returns |
+| Logging | [`lib/server/logger.ts`](../lib/server/logger.ts) — redaction **allowlist**; a field is logged only if explicitly named |
+| Errors | Generic code to the client, detail to the log — `toErrorResponse()` |
+| Bundle | [`scripts/verify-no-secrets.mjs`](../scripts/verify-no-secrets.mjs) — greps built client output for key patterns |
 
 ---
 
 ## 5. Indexes
 
-`firestore.indexes.json` — needed once you sort and filter the timeline:
-
-- `sessions`: `status ASC, startedAt DESC`
-- `sessions`: `sealed ASC, startedAt DESC`
-- `ai_calls`: `at DESC`
+[`firestore.indexes.json`](../firestore.indexes.json): `sessions` by `status + startedAt`,
+`sessions` by `sealed + startedAt`, `ai_calls` by `at`.
 
 No vector index in v1 — see the tradeoff note in [02-ARCHITECTURE.md](02-ARCHITECTURE.md).
