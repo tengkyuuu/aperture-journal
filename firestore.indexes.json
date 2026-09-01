@@ -15,13 +15,6 @@
         { "fieldPath": "sealed", "order": "ASCENDING" },
         { "fieldPath": "startedAt", "order": "DESCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "ai_calls",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "at", "order": "DESCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []
