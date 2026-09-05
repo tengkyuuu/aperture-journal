@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     }
 
     const context = buildContext(entries);
-    const { stream, usage } = await streamGroundedAnswer(question, context, req.signal);
+    const { stream, usage, model } = await streamGroundedAnswer(question, context, req.signal);
 
     const encoder = new TextEncoder();
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
           try {
             await recordAiCall(uid, {
               route: '/api/ask',
-              model: MODELS.chat,
+              model,
               purpose: 'ask',
               inputTokens,
               outputTokens,
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
           log.info('ask_answered', {
             route: '/api/ask',
             uidHash: uidTag(uid),
-            model: MODELS.chat,
+            model,
             inputTokens,
             outputTokens,
             durationMs: latencyMs,

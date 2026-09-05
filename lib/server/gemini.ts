@@ -225,6 +225,40 @@ export interface StreamResult {
   stream: AsyncGenerator<string>;
   /** Resolves once the stream is fully consumed. */
   usage: Promise<{ inputTokens: number; outputTokens: number }>;
+  /**
+   * The model that actually answered — which may be the fallback.
+   *
+   * Callers write this to the ledger rather than the model they asked for. A
+   * ledger that reports the requested model while a different one answered is
+   * a ledger that lies, and the whole point of it is that it does not.
+   */
+  model: string;
+}
+
+/**
+ * Run against the primary model; on a rate limit or overload, try the
+ * fallback once.
+ *
+ * The free tier meters per model, so when one is exhausted for the day another
+ * still has budget. Only ProviderBusy triggers this — a 400 means the request
+ * itself is wrong and the fallback would reject it just as fast.
+ */
+async function withFallback<T>(
+  label: string,
+  primary: string,
+  fallback: string,
+  run: (model: string) => Promise<T>,
+): Promise<{ value: T; model: string }> {
+  try {
+    return { value: await withRetry(label, () => run(primary)), model: primary };
+  } catch (err) {
+    if (!(err instanceof ProviderBusy) || fallback === primary) throw err;
+    log.warn('gemini_fallback', { reason: label, model: fallback });
+    return {
+      value: await withRetry(`${label}:fallback`, () => run(fallback)),
+      model: fallback,
+    };
+  }
 }
 
 /**
@@ -241,20 +275,24 @@ export async function streamChat(
 ): Promise<StreamResult> {
   const ai = await client();
 
-  const response = await withRetry('chat', () =>
-    ai.models.generateContentStream({
-    model: MODELS.chat,
-    contents,
-    config: {
-      systemInstruction: systemInstructionFor(mode),
-      maxOutputTokens: LIMITS.maxOutputTokens,
-      temperature: 0.9,
-      // Conversation should feel immediate. Synthesis gets a thinking budget;
-      // a journaling reply does not need one.
-      thinkingConfig: { thinkingBudget: 0 },
-      abortSignal: signal,
-    },
-    }),
+  const { value: response, model } = await withFallback(
+    'chat',
+    MODELS.chat,
+    MODELS.chatFallback,
+    (m) =>
+      ai.models.generateContentStream({
+        model: m,
+        contents,
+        config: {
+          systemInstruction: systemInstructionFor(mode),
+          maxOutputTokens: LIMITS.maxOutputTokens,
+          temperature: 0.9,
+          // Conversation should feel immediate. A journaling reply does not
+          // need the model to deliberate first.
+          thinkingConfig: { thinkingBudget: 0 },
+          abortSignal: signal,
+        },
+      }),
   );
 
   let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
@@ -280,7 +318,7 @@ export async function streamChat(
     }
   }
 
-  return { stream: iterate(), usage };
+  return { stream: iterate(), usage, model };
 }
 
 /** Convert stored turns into the SDK's Content shape. */
@@ -417,6 +455,8 @@ export interface SummaryResult {
   raw: unknown;
   inputTokens: number;
   outputTokens: number;
+  /** The model that actually produced this. May be the fallback. */
+  model: string;
 }
 
 /**
@@ -429,18 +469,22 @@ export async function summarizeSession(
 ): Promise<SummaryResult> {
   const ai = await client();
 
-  const response = await withRetry('summarize', () =>
-    ai.models.generateContent({
-    model: MODELS.synthesis,
-    contents: toContents(turns),
-    config: {
-      systemInstruction: SUMMARIZE_INSTRUCTION,
-      responseMimeType: 'application/json',
-      responseSchema: INSIGHT_SCHEMA,
-      temperature: 0.4,
-      maxOutputTokens: 1600,
-    },
-    }),
+  const { value: response, model } = await withFallback(
+    'summarize',
+    MODELS.synthesis,
+    MODELS.synthesisFallback,
+    (m) =>
+      ai.models.generateContent({
+        model: m,
+        contents: toContents(turns),
+        config: {
+          systemInstruction: SUMMARIZE_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: INSIGHT_SCHEMA,
+          temperature: 0.4,
+          maxOutputTokens: 1600,
+        },
+      }),
   );
 
   const text = response.text;
@@ -450,6 +494,7 @@ export async function summarizeSession(
     raw: JSON.parse(text),
     inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
     outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+    model,
   };
 }
 
@@ -533,23 +578,27 @@ export async function streamGroundedAnswer(
 ): Promise<StreamResult> {
   const ai = await client();
 
-  const response = await withRetry('ask', () =>
-    ai.models.generateContentStream({
-    model: MODELS.chat,
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: `${context}\n\nQuestion: ${question}` }],
-      },
-    ],
-    config: {
-      systemInstruction: ASK_INSTRUCTION,
-      maxOutputTokens: LIMITS.maxOutputTokens,
-      temperature: 0.3,
-      thinkingConfig: { thinkingBudget: 0 },
-      abortSignal: signal,
-    },
-    }),
+  const { value: response, model } = await withFallback(
+    'ask',
+    MODELS.chat,
+    MODELS.chatFallback,
+    (m) =>
+      ai.models.generateContentStream({
+        model: m,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${context}\n\nQuestion: ${question}` }],
+          },
+        ],
+        config: {
+          systemInstruction: ASK_INSTRUCTION,
+          maxOutputTokens: LIMITS.maxOutputTokens,
+          temperature: 0.3,
+          thinkingConfig: { thinkingBudget: 0 },
+          abortSignal: signal,
+        },
+      }),
   );
 
   let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
@@ -575,5 +624,5 @@ export async function streamGroundedAnswer(
     }
   }
 
-  return { stream: iterate(), usage };
+  return { stream: iterate(), usage, model };
 }

@@ -69,7 +69,7 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 
 | Command | Does |
 |---|---|
-| `npm run dev` | Local dev server |
+| `npm run dev` | Local dev server on **port 3200** (3000 is taken by another project) |
 | `npm test` | Vault crypto + cross-user isolation |
 | `npm run test:vault` | 14 WebCrypto tests — round trip, wrong key, tampering, non-extractability |
 | `npm run test:rules` | 26 isolation tests against the Firestore emulator (needs Java) |

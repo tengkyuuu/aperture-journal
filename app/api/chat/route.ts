@@ -9,7 +9,7 @@ import { recordAiCall, recordSecurityEvent } from '@/lib/server/ledger';
 import { consumeQuota, settleQuota } from '@/lib/server/ratelimit';
 import { log, uidTag } from '@/lib/server/logger';
 import { ChatRequestSchema } from '@/lib/shared/schemas';
-import { LIMITS, MODELS } from '@/lib/config';
+import { LIMITS } from '@/lib/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,7 +107,9 @@ export async function POST(req: Request) {
     });
 
     // ─── Stream ─────────────────────────────────────────────────────────────
-    const { stream, usage } = await streamChat(body.mode, toContents(turns), req.signal);
+    // `model` is what actually answered — the fallback if the primary was
+    // rate-limited. The ledger records that, not what we asked for.
+    const { stream, usage, model } = await streamChat(body.mode, toContents(turns), req.signal);
 
     const encoder = new TextEncoder();
     let full = '';
@@ -136,7 +138,7 @@ export async function POST(req: Request) {
             );
             await recordAiCall(uid, {
               route: '/api/chat',
-              model: MODELS.chat,
+              model,
               purpose: 'chat',
               inputTokens,
               outputTokens,
@@ -154,7 +156,7 @@ export async function POST(req: Request) {
             route: '/api/chat',
             uidHash: uidTag(uid),
             mode: body.mode,
-            model: MODELS.chat,
+            model,
             inputTokens,
             outputTokens,
             durationMs: latencyMs,

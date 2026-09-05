@@ -7,44 +7,51 @@
  */
 
 export const MODELS = {
+  /** Conversation. Measured against the live API — see the findings below. */
+  chat: 'gemini-3.1-flash-lite',
   /**
-   * Conversation. Chosen empirically on 2026-09-05 against the live API, not
-   * from documentation — see the findings below.
+   * Used when the primary is rate-limited or overloaded. A DIFFERENT model,
+   * because the free tier meters per model: when one is exhausted for the day,
+   * another still has budget.
    */
-  chat: 'gemini-3.5-flash',
-  /** Session summaries. Same model; structured output verified working. */
-  synthesis: 'gemini-3.5-flash',
+  chatFallback: 'gemini-3.8-flash',
+  /** Session summaries. Structured output verified working. */
+  synthesis: 'gemini-3.1-flash-lite',
+  synthesisFallback: 'gemini-3.8-flash',
   /** Retrieval embeddings for "Ask Your Past". 768 dims verified. */
   embedding: 'gemini-embedding-001',
 } as const;
 
 /**
- * ══ MODEL SELECTION — measured, not guessed ══
+ * ══ MODEL SELECTION — measured, and re-measured ══
  *
- * `gemini-2.5-flash` is GONE. The API returns 404 "no longer available to new
- * users" and points at gemini-3.6-flash. This is exactly the drift the sprint
- * plan flagged as a standing risk, which is why every model id lives here.
+ * `gemini-2.5-flash` is GONE: 404, "no longer available to new users".
  *
- * What the newer flash models actually do, tested with this app's own request
- * shapes:
+ * Two rounds of probing with this app's own request shapes, a day apart,
+ * because the first round drew a wrong conclusion worth recording:
  *
- *   gemini-3.6-flash   REJECTS thinkingConfig.thinkingBudget: 0 with a bare
- *                      400 "invalid argument". Works with no thinkingConfig or
- *                      a positive budget, spending ~300-400 thinking tokens
- *                      and ~3.5s per reply.
- *   gemini-3.8-flash   Same rejection of budget 0. Also returned 503 "high
- *                      demand" on several calls — a real risk mid-demo.
- *   gemini-3.5-flash   Accepts thinkingBudget: 0. ~1.4s per chat reply, the
- *                      fastest of the three, and no 503s observed.
+ *   gemini-3.6-flash        REJECTS thinkingConfig.thinkingBudget: 0 with a
+ *                           bare 400. Real and reproducible.
+ *   gemini-3.5-flash-lite   Same 400.
+ *   gemini-flash-lite-latest Same 400.
+ *   gemini-3.8-flash        ACCEPTS budget 0. The first round recorded it as
+ *                           rejecting — that was a 503 under load misread as
+ *                           the 400 its neighbour returned. Fast when it
+ *                           answers, but 503s often enough to be a demo risk.
+ *   gemini-3.1-flash-lite   Accepts budget 0. ~0.7s chat, ~1.0s structured
+ *                           output, correct mood polarity. No 503s observed.
  *
- * So: 3.5-flash, with thinking disabled. A journaling reply should land
- * immediately; the model does not need to deliberate to ask a good question,
- * and 1.4s versus 3.5s is the difference between a conversation and a wait.
+ * So: 3.1-flash-lite primary, 3.8-flash as the fallback. A journaling reply
+ * should land immediately, and sub-second is the difference between a
+ * conversation and a wait.
  *
- * IF YOU MIGRATE to 3.6/3.8 you MUST drop `thinkingBudget: 0` from streamChat
- * in lib/server/gemini.ts, or every chat request will 400.
+ * IF YOU MIGRATE to 3.6 or either flash-lite-latest, you MUST drop
+ * `thinkingBudget: 0` from streamChat or every chat request will 400.
  *
- * Re-check with: npm run verify:gemini
+ * On a PAID project, prefer gemini-3.8-flash or gemini-flash-latest for the
+ * primary — better quality, and the 503s are a free-tier capacity artefact.
+ *
+ * Re-check any time with: npm run verify:gemini
  */
 
 /**
@@ -54,6 +61,7 @@ export const MODELS = {
  * pricing before the demo.
  */
 export const PRICING_PER_MTOK: Record<string, { input: number; output: number }> = {
+  'gemini-3.1-flash-lite': { input: 0.1, output: 0.4 },
   'gemini-3.5-flash': { input: 0.3, output: 2.5 },
   'gemini-3.6-flash': { input: 0.3, output: 2.5 },
   'gemini-3.8-flash': { input: 0.3, output: 2.5 },

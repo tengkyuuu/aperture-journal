@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const estimate = usable.reduce((n, t) => n + Math.ceil(t.content.length / 3.5), 0) + 1600;
     await consumeQuota(uid, estimate);
 
-    const { raw, inputTokens, outputTokens } = await summarizeSession(usable);
+    const { raw, inputTokens, outputTokens, model } = await summarizeSession(usable);
 
     // Model output is a trust boundary too. A schema-constrained response is a
     // strong expectation, not a guarantee, and this lands in the UI.
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       log.error('summary_schema_mismatch', {
         route: '/api/session/summarize',
-        model: MODELS.synthesis,
+        model,
         sessionId,
       });
       return NextResponse.json({ error: 'summary_unavailable' }, { status: 502 });
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
 
     await recordAiCall(uid, {
       route: '/api/session/summarize',
-      model: MODELS.synthesis,
+      model,
       purpose: 'summarize',
       inputTokens,
       outputTokens,
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
     log.info('session_summarized', {
       route: '/api/session/summarize',
       uidHash: uidTag(uid),
-      model: MODELS.synthesis,
+      model,
       inputTokens,
       outputTokens,
       durationMs: latencyMs,

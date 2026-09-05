@@ -24,7 +24,9 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const BASE = process.env.E2E_BASE ?? 'http://127.0.0.1:3000';
+// Port 3200, not 3000 — another project on this machine owns 3000, and a
+// reachability check that silently hits someone else's app is a bad time.
+const BASE = process.env.E2E_BASE ?? 'http://127.0.0.1:3200';
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? 'aperture-journal';
 
 function env(key) {

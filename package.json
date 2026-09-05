@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 3200",
     "build": "next build --turbopack",
-    "start": "next start",
+    "start": "next start -p 3200",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "emulators": "firebase emulators:start --only firestore,auth --project demo-aperture",
@@ -15,7 +15,8 @@
     "test:vault": "vitest run tests/vault.test.ts",
     "test": "vitest run tests/vault.test.ts && npm run test:rules",
     "verify:gemini": "node scripts/verify-gemini.mjs",
-    "test:e2e": "node scripts/e2e.mjs"
+    "test:e2e": "node scripts/e2e.mjs",
+    "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^7.0.0",
