@@ -13,7 +13,7 @@
  */
 
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = '.next/static';
@@ -26,8 +26,27 @@ const PATTERNS = [
   { name: 'googleapis.com\/auth\/cloud-platform scope', re: /auth\/cloud-platform/ },
 ];
 
-/** The public Firebase web API key is expected in the bundle and is not a secret. */
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
+/**
+ * The Firebase web API key is expected in the bundle: it identifies the
+ * project rather than authorising anything, and Firestore rules plus App Check
+ * are what protect the data. It is the ONE value allowed to match.
+ *
+ * npm scripts do not load .env.local, so read it here. Note the allowance is
+ * an exact string comparison against that single value — any other AIza-shaped
+ * key still fails the check, which is the property that matters.
+ */
+function publicFirebaseKey() {
+  if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+    return process.env.NEXT_PUBLIC_FIREBASE_API_KEY.trim();
+  }
+  if (!existsSync('.env.local')) return undefined;
+  const line = readFileSync('.env.local', 'utf8')
+    .split('\n')
+    .find((l) => l.startsWith('NEXT_PUBLIC_FIREBASE_API_KEY='));
+  return line?.slice('NEXT_PUBLIC_FIREBASE_API_KEY='.length).trim() || undefined;
+}
+
+const PUBLIC_KEY = publicFirebaseKey();
 
 async function* walk(dir) {
   for (const entry of await readdir(dir)) {

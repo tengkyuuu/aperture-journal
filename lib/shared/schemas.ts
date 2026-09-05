@@ -45,6 +45,41 @@ export const SummarizeRequestSchema = z.strictObject({
   sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
 });
 
+/** Base64 without whitespace. Ciphertext and salts arrive in this shape. */
+const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/**
+ * Vault setup. Neither of these is secret — the salt defeats precomputed
+ * tables, and the check blob only proves that a derived key is the right one.
+ * The passphrase itself never reaches this server, which is the entire point.
+ */
+export const VaultInitSchema = z.strictObject({
+  salt: z.string().regex(B64).min(20).max(64),
+  check: z.string().regex(B64).min(20).max(512),
+});
+
+/**
+ * Sealing an existing session. The client sends ciphertext it produced in the
+ * browser; the server swaps each message's plaintext for the blob and drops
+ * every derived artefact (title, summary, insights, embedding) along with it.
+ */
+export const SealRequestSchema = z.strictObject({
+  sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  messages: z
+    .array(
+      z.strictObject({
+        id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+        cipher: z.string().regex(B64).min(20).max(64_000),
+      }),
+    )
+    .min(1)
+    .max(400),
+});
+
+export const AskRequestSchema = z.strictObject({
+  question: z.string().min(3).max(500),
+});
+
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatTurn = z.infer<typeof ChatTurnSchema>;
 export type Mode = z.infer<typeof ModeSchema>;

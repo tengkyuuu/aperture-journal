@@ -2,6 +2,7 @@ import 'server-only';
 
 import { GoogleGenAI, Type, type Content, type Schema } from '@google/genai';
 
+import { UNTRUSTED_CONTENT_RULE } from './injection';
 import { getSecret } from './secrets';
 import { LIMITS, MODELS, type ConversationMode } from '../config';
 
@@ -333,4 +334,125 @@ export async function summarizeSession(
     inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
     outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
   };
+}
+
+// ─── Embeddings (Ask Your Past) ──────────────────────────────────────────────
+
+/** Dimensionality we store. Smaller than the model's default; see normalise(). */
+export const EMBED_DIMS = 768;
+
+/**
+ * gemini-embedding-001 returns unit-normalised vectors only at its native
+ * 3072 dimensions. At any smaller output size the vector must be normalised by
+ * the caller — otherwise cosine similarity silently degrades into something
+ * that mostly measures magnitude.
+ */
+function normalise(values: number[]): number[] {
+  let sum = 0;
+  for (const v of values) sum += v * v;
+  const mag = Math.sqrt(sum);
+  if (mag === 0) return values;
+  return values.map((v) => v / mag);
+}
+
+export interface EmbedResult {
+  values: number[];
+  inputTokens: number;
+}
+
+/**
+ * Embed one piece of text.
+ *
+ * `taskType` is not decoration: the model produces different vectors for a
+ * document being stored and a question being asked, and matching them up is
+ * what makes retrieval work. Using the same task type for both measurably
+ * hurts results.
+ */
+export async function embed(
+  text: string,
+  taskType: 'RETRIEVAL_DOCUMENT' | 'RETRIEVAL_QUERY',
+): Promise<EmbedResult> {
+  const ai = await client();
+
+  const res = await ai.models.embedContent({
+    model: MODELS.embedding,
+    contents: text,
+    config: { outputDimensionality: EMBED_DIMS, taskType },
+  });
+
+  const values = res.embeddings?.[0]?.values;
+  if (!values?.length) throw new Error('EMBED_EMPTY');
+
+  return { values: normalise(values), inputTokens: estimateTokens(text) };
+}
+
+// ─── Grounded answering ──────────────────────────────────────────────────────
+
+const ASK_INSTRUCTION = `
+You answer questions about the user's own journal, using only the entries
+provided as context.
+
+Ground every claim in those entries and cite the session it came from with a
+marker like [[abc123]], using the id given in the entry's tag. Cite as you go,
+inline, not as a list at the end.
+
+If the entries do not answer the question, say so plainly and say what they do
+cover instead. Never fill a gap with a plausible guess — a journal is a record,
+and inventing something the person did not write is the one unforgivable
+failure here.
+
+Write in second person, in plain prose. No headings, no bullet lists.
+
+${UNTRUSTED_CONTENT_RULE}
+
+${SAFETY_CLAUSE}`.trim();
+
+export async function streamGroundedAnswer(
+  question: string,
+  context: string,
+  signal?: AbortSignal,
+): Promise<StreamResult> {
+  const ai = await client();
+
+  const response = await ai.models.generateContentStream({
+    model: MODELS.chat,
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: `${context}\n\nQuestion: ${question}` }],
+      },
+    ],
+    config: {
+      systemInstruction: ASK_INSTRUCTION,
+      maxOutputTokens: LIMITS.maxOutputTokens,
+      temperature: 0.3,
+      thinkingConfig: { thinkingBudget: 0 },
+      abortSignal: signal,
+    },
+  });
+
+  let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
+  const usage = new Promise<{ inputTokens: number; outputTokens: number }>((r) => {
+    resolveUsage = r;
+  });
+
+  async function* iterate(): AsyncGenerator<string> {
+    let inputTokens = 0;
+    let outputTokens = 0;
+    try {
+      for await (const chunk of response) {
+        const meta = chunk.usageMetadata;
+        if (meta) {
+          inputTokens = meta.promptTokenCount ?? inputTokens;
+          outputTokens = meta.candidatesTokenCount ?? outputTokens;
+        }
+        const text = chunk.text;
+        if (text) yield text;
+      }
+    } finally {
+      resolveUsage({ inputTokens, outputTokens });
+    }
+  }
+
+  return { stream: iterate(), usage };
 }

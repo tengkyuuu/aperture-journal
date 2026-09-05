@@ -1,21 +1,34 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { decrypt, encrypt } from '@/lib/client/vault';
 import type { ConversationMode } from '@/lib/config';
 import type { Insights, StoredMessage } from '@/lib/shared/types';
+import { useVault } from '@/components/vault/vault-provider';
+import { VaultGate } from '@/components/vault/vault-gate';
+import { IconVault } from '@/components/shell/icons';
 
 import { Composer } from './composer';
 import { Distilling, InsightReveal } from './closing-ritual';
 import { MessageBlock, SealedBlock } from './message-block';
 
-type Turn = { id: string; role: 'user' | 'model'; content: string; sealed: boolean };
+type Turn = {
+  id: string;
+  role: 'user' | 'model';
+  content: string;
+  cipher: string | null;
+  sealed: boolean;
+};
 
 type RitualState = 'idle' | 'distilling' | 'revealed';
+type SealState = 'idle' | 'sealing' | 'sealed';
 
 /** The ceremony holds for this long even if the model comes back sooner. */
 const MIN_DISTILL_MS = 1_900;
+/** Long enough for the seal to land with weight. */
+const SEAL_ANIM_MS = 1_100;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -25,6 +38,7 @@ export function Canvas({
   initialInsights = null,
   initialMode = 'reflect',
   closed = false,
+  sealed = false,
   placeholder,
 }: {
   sessionId?: string;
@@ -32,15 +46,18 @@ export function Canvas({
   initialInsights?: Insights | null;
   initialMode?: ConversationMode;
   closed?: boolean;
+  sealed?: boolean;
   placeholder?: string;
 }) {
   const router = useRouter();
+  const vault = useVault();
 
   const [turns, setTurns] = useState<Turn[]>(() =>
     initialMessages.map((m) => ({
       id: m.id,
       role: m.role,
       content: m.content ?? '',
+      cipher: m.cipher,
       sealed: m.sealed,
     })),
   );
@@ -50,14 +67,54 @@ export function Canvas({
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<Insights | null>(initialInsights);
   const [ritual, setRitual] = useState<RitualState>(initialInsights ? 'revealed' : 'idle');
+  const [sealState, setSealState] = useState<SealState>(sealed ? 'sealed' : 'idle');
+  const [gateOpen, setGateOpen] = useState(false);
+  const [decrypted, setDecrypted] = useState(false);
 
   const sessionId = useRef<string | undefined>(initialSessionId);
   const bottom = useRef<HTMLDivElement>(null);
+  const sealAfterUnlock = useRef(false);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [turns.length, ritual]);
 
+  // ── Reading a sealed session ────────────────────────────────────────────
+  // Decryption happens here, in the browser, with a key the server has never
+  // seen. Locking the vault throws the plaintext away again.
+  useEffect(() => {
+    if (!sealed || !vault.key) {
+      if (!vault.key && decrypted) {
+        setTurns((t) => t.map((x) => (x.sealed ? { ...x, content: '' } : x)));
+        setDecrypted(false);
+      }
+      return;
+    }
+    if (decrypted) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const out = await Promise.all(
+          turns.map(async (t) => {
+            if (!t.sealed || !t.cipher) return t;
+            return { ...t, content: await decrypt(vault.key!, t.cipher) };
+          }),
+        );
+        if (!cancelled) {
+          setTurns(out);
+          setDecrypted(true);
+        }
+      } catch {
+        if (!cancelled) setError('These entries could not be decrypted with that passphrase.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sealed, vault.key, decrypted, turns]);
+
+  // ── Sending ─────────────────────────────────────────────────────────────
   async function send() {
     const message = input.trim();
     if (!message || streaming || ritual !== 'idle') return;
@@ -69,8 +126,8 @@ export function Canvas({
     const stamp = Date.now();
     setTurns((t) => [
       ...t,
-      { id: `u-${stamp}`, role: 'user', content: message, sealed: false },
-      { id: `m-${stamp}`, role: 'model', content: '', sealed: false },
+      { id: `u-${stamp}`, role: 'user', content: message, cipher: null, sealed: false },
+      { id: `m-${stamp}`, role: 'model', content: '', cipher: null, sealed: false },
     ]);
 
     try {
@@ -110,9 +167,6 @@ export function Canvas({
         });
       }
 
-      // A brand-new session gets its own URL once its first exchange is
-      // persisted. Nothing is lost in the swap — the session page reloads the
-      // same messages from Firestore.
       if (isNew && returnedId) {
         router.replace(`/session/${returnedId}`, { scroll: false });
       } else {
@@ -126,6 +180,7 @@ export function Canvas({
     }
   }
 
+  // ── The Closing Ritual ──────────────────────────────────────────────────
   async function endSession() {
     if (!sessionId.current || ritual !== 'idle' || streaming) return;
 
@@ -140,7 +195,6 @@ export function Canvas({
         body: JSON.stringify({ sessionId: sessionId.current }),
       });
 
-      // Hold the ceremony even when the model is fast.
       const elapsed = Date.now() - startedAt;
       if (elapsed < MIN_DISTILL_MS) await sleep(MIN_DISTILL_MS - elapsed);
 
@@ -164,27 +218,93 @@ export function Canvas({
     }
   }
 
+  // ── The Seal ────────────────────────────────────────────────────────────
+  const doSeal = useCallback(async () => {
+    const id = sessionId.current;
+    if (!id || !vault.key || sealState !== 'idle') return;
+
+    setError(null);
+    setSealState('sealing');
+
+    try {
+      // Encrypt in the browser. What leaves this machine is ciphertext.
+      const payload = await Promise.all(
+        turns
+          .filter((t) => !t.sealed && t.content.trim().length > 0)
+          .map(async (t) => ({ id: t.id, cipher: await encrypt(vault.key!, t.content) })),
+      );
+
+      if (payload.length === 0) {
+        setSealState('idle');
+        setError('There is nothing here to seal yet.');
+        return;
+      }
+
+      const [res] = await Promise.all([
+        fetch('/api/session/seal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: id, messages: payload }),
+        }),
+        // Let the animation play out rather than snapping.
+        sleep(SEAL_ANIM_MS),
+      ]);
+
+      if (!res.ok) {
+        setSealState('idle');
+        setError('The entry could not be sealed. Nothing was changed.');
+        return;
+      }
+
+      setSealState('sealed');
+      setInsights(null);
+      setRitual('idle');
+      router.refresh();
+    } catch {
+      setSealState('idle');
+      setError('The entry could not be sealed. Nothing was changed.');
+    }
+  }, [turns, vault.key, sealState, router]);
+
+  function requestSeal() {
+    if (vault.status !== 'unlocked') {
+      sealAfterUnlock.current = true;
+      setGateOpen(true);
+      return;
+    }
+    void doSeal();
+  }
+
   const hasContent = turns.some((t) => !t.sealed && t.content.trim().length > 0);
   const canEnd = Boolean(sessionId.current) && hasContent && ritual === 'idle' && !streaming;
+  const canSeal =
+    Boolean(sessionId.current) && hasContent && !sealed && sealState === 'idle' && !streaming;
+
+  const showComposer = ritual === 'idle' && !closed && !sealed && sealState === 'idle';
 
   return (
     <div className="flex flex-col gap-8">
-      {turns.length > 0 ? (
-        <div className="flex flex-col gap-7">
-          {turns.map((t, i) =>
-            t.sealed ? (
-              <SealedBlock key={t.id} />
-            ) : (
-              <MessageBlock
-                key={t.id}
-                role={t.role}
-                content={t.content}
-                streaming={streaming && i === turns.length - 1 && t.role === 'model'}
-              />
-            ),
-          )}
-        </div>
-      ) : null}
+      <div className={sealState === 'sealing' ? 'animate-seal-blur' : undefined}>
+        {turns.length > 0 ? (
+          <div className="flex flex-col gap-7">
+            {turns.map((t, i) =>
+              t.sealed && !t.content ? (
+                <SealedBlock key={t.id} onUnlock={() => setGateOpen(true)} />
+              ) : (
+                <MessageBlock
+                  key={t.id}
+                  role={t.role}
+                  content={t.content}
+                  sealed={t.sealed}
+                  streaming={streaming && i === turns.length - 1 && t.role === 'model'}
+                />
+              ),
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {sealState === 'sealing' ? <SealCeremony /> : null}
 
       {ritual === 'distilling' ? <Distilling /> : null}
       {ritual === 'revealed' && insights ? <InsightReveal insights={insights} /> : null}
@@ -195,7 +315,7 @@ export function Canvas({
         </p>
       ) : null}
 
-      {ritual === 'idle' && !closed ? (
+      {showComposer ? (
         <Composer
           value={input}
           onChange={setInput}
@@ -208,6 +328,31 @@ export function Canvas({
           canEnd={canEnd}
           onEnd={endSession}
         />
+      ) : null}
+
+      {canSeal ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-line pt-5">
+          <button
+            type="button"
+            onClick={requestSeal}
+            className="inline-flex items-center gap-2 rounded-full border border-sealed/50 px-3.5 py-1.5 text-[12.5px] text-sealed transition-colors hover:bg-sealed/[0.07]"
+          >
+            <IconVault className="size-3.5" />
+            Seal this entry
+          </button>
+          <p className="text-[12px] leading-relaxed text-ink-3">
+            Encrypted in this browser. Neither we nor Gemini can read it afterwards — which
+            also means no summary, no search, and no mood tracking for it.
+          </p>
+        </div>
+      ) : null}
+
+      {sealState === 'sealed' || sealed ? (
+        <p className="text-[13px] text-ink-3">
+          {vault.status === 'unlocked'
+            ? 'Sealed. Decrypted here in your browser; the server still holds only ciphertext.'
+            : 'Sealed. Unlock your vault to read this.'}
+        </p>
       ) : null}
 
       {ritual === 'revealed' ? (
@@ -224,7 +369,37 @@ export function Canvas({
         </p>
       ) : null}
 
+      <VaultGate
+        open={gateOpen}
+        onClose={() => {
+          setGateOpen(false);
+          sealAfterUnlock.current = false;
+        }}
+        onUnlocked={() => {
+          if (sealAfterUnlock.current) {
+            sealAfterUnlock.current = false;
+            void doSeal();
+          }
+        }}
+      />
+
       <div ref={bottom} />
+    </div>
+  );
+}
+
+/** The wax seal pressing down. Slow, weighted, deliberately theatrical. */
+function SealCeremony() {
+  return (
+    <div
+      className="pointer-events-none flex flex-col items-center gap-5 py-14"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="animate-seal-press grid size-16 place-items-center rounded-full bg-sealed text-white shadow-lg">
+        <IconVault className="size-7" />
+      </div>
+      <span className="label text-sealed">sealing</span>
     </div>
   );
 }

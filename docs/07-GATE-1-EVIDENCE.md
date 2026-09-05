@@ -202,3 +202,128 @@ These ride along with the Gate 1 outstanding list; all need a real Google Cloud 
 - [ ] **The Distillation** — end a session, watch the summary reveal
 - [ ] A real model response validates against `InsightsSchema`
 - [ ] Mood dot and themes appear on the timeline entry
+
+---
+
+# Gate 3 — The Differentiators
+
+All four Phase 3 enhancements are implemented.
+
+## Gate 3 — verified ✅
+
+### 1. Vault crypto — 14/14 tests green
+
+```
+$ npm run test:vault
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+```
+
+Run against the same WebCrypto implementation the browser uses — Node exposes an
+identical `crypto.subtle`, so this exercises the real code path rather than a mock.
+
+The negative tests are the ones that matter:
+
+| Test | Proves |
+|---|---|
+| A wrong passphrase cannot decrypt | The key actually gates the content |
+| The same passphrase under a different salt cannot decrypt | The salt is doing its job |
+| Tampered ciphertext throws | AES-GCM authenticates — a flipped byte is rejected, not silently rendered as nonsense |
+| A truncated blob throws | No partial-decrypt path |
+| The check blob contains no part of the passphrase | Verifying a passphrase leaks nothing |
+| `key.extractable === false` and `exportKey` rejects | Not even our own JavaScript can read the key material back out, which caps what an XSS can steal |
+| 50 salts, 50 distinct values | No accidental reuse |
+| Identical plaintext encrypts differently twice | Fresh IV per call, so equal entries don't look equal |
+
+**Screenshot this alongside the rules suite.**
+
+### 2. Isolation suite still green after all four features
+
+26/26, unchanged.
+
+### 3. Every new endpoint rejects correctly
+
+| Route | Unauthenticated | Cross-origin |
+|---|---|---|
+| `POST /api/ask` | `401` | `400` |
+| `POST /api/vault/init` | `401` | `400` |
+| `POST /api/session/seal` | `401` | `400` |
+| `POST /api/account/delete` | `401` | `400` |
+| `GET /api/account/export` | `401` | — |
+| `/vault` `/insights` `/ask` `/security` | `307` to `/sign-in` | — |
+
+### 4. Bundle scanner fixed and proven both ways
+
+It was failing on the Firebase web API key — which is public by design and belongs in the
+bundle. The allowance existed but read from `process.env`, and npm scripts do not load
+`.env.local`. The scanner now reads that file itself.
+
+Verified in both directions: the real public key passes, and a planted `AIza…` key in
+`.next/static` still fails the run. An allowance that swallowed every key would be worse
+than no scanner.
+
+---
+
+## What each enhancement actually does
+
+### E1 · Zero-Knowledge Vault
+
+PBKDF2-HMAC-SHA256 at 600,000 rounds derives a non-extractable AES-256-GCM key in the
+browser. Sealing encrypts every message client-side and `POST`s ciphertext.
+
+**The part that makes it real:** sealing also deletes the title, summary, insights, and
+embedding in the same atomic batch. A summary is a lossy copy of the content and an embedding
+is a lossy copy of the summary — sealing a session while leaving those behind would be
+encryption theatre with the interesting part still sitting in the clear.
+
+`/api/vault/init` refuses to overwrite an existing vault. Replacing the salt would silently
+orphan every entry sealed under the old one: still present, never readable again.
+
+No recovery, deliberately. An escrow would defeat the property. The UI makes you tick a box.
+
+### E2 · Privacy Ledger + Injection Firewall
+
+Every model call writes an append-only, client-unwritable row: route, model, purpose, token
+counts, latency, estimated cost, and which classes of data were included. The Security page
+renders it as plain English first and a table second.
+
+Export produces real JSON including sealed entries **as ciphertext**, stated plainly — we
+cannot decrypt them for the export either. Delete uses `recursiveDelete` so message
+subcollections go too (the classic Firestore deletion bug), then removes the auth user —
+Firestore first, so a partial failure can never orphan data under an unreachable uid.
+
+### E3 · Emotional Weather + Theme Constellation
+
+Colour is mixed in `oklab` between the two semantic tokens, so the ribbon follows the theme
+instead of being a hardcoded rainbow. Mood always carries a text label; colour is never the
+only encoding.
+
+The constellation is a deterministic force simulation run to completion at render — no
+animation loop, and the same journal produces the same picture every visit. A layout that
+rearranges itself is decoration, not information.
+
+### E4 · Ask Your Past
+
+Embeddings are taken of the **summary, never the raw messages** — a summary is content the
+user already agreed to have generated, and embedding raw entries would put a derivative of
+every private sentence into a field built to be shipped around.
+
+Retrieval is in-memory cosine over the user's own uid-scoped embeddings. No vector index, no
+build-time dependency. The honest cost is documented: ~6 KB per session, so switch to
+`findNearest` past a few thousand.
+
+Retrieved entries are wrapped in delimiters with a data-not-instructions rule, because a
+journal can contain anything its owner has ever pasted into it.
+
+---
+
+## Gate 3 — still needs the live project
+
+Everything above is verified without a single Gemini call. What is not:
+
+- [ ] A real seal, then the Firestore console showing `cipher: "…"` — **the demo moment**
+- [ ] Unlock and read a sealed entry back
+- [ ] The ledger populating with real token counts and costs
+- [ ] The weather ribbon and constellation with real distilled sessions
+- [ ] A cited answer from Ask Your Past

@@ -285,6 +285,46 @@
     }
   }
 
+  /* ══ SIGNATURE MOMENT #1: The Seal ══
+     The content blurs away, an ember seal presses down with weight, the entry
+     locks. Slower and heavier than anything else in the interface, because it
+     is the one action that cannot be undone. */
+  @keyframes seal-press {
+    0% {
+      opacity: 0;
+      transform: scale(2.4) rotate(-14deg);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(0.92) rotate(2deg);
+    }
+    75% {
+      transform: scale(1.04) rotate(-1deg);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  @keyframes seal-blur {
+    from {
+      filter: blur(0);
+      opacity: 1;
+    }
+    to {
+      filter: blur(7px);
+      opacity: 0.32;
+    }
+  }
+
+  .animate-seal-press {
+    animation: seal-press 0.6s cubic-bezier(0.34, 1.3, 0.36, 1) both;
+  }
+  .animate-seal-blur {
+    animation: seal-blur 0.55s var(--ease-emphasized) both;
+  }
+
   .animate-reveal-word {
     animation: reveal-word 0.28s var(--ease-emphasized) both;
   }

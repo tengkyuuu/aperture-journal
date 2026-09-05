@@ -69,23 +69,31 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | Command | Does |
 |---|---|
 | `npm run dev` | Local dev server |
-| `npm run test:rules` | Cross-user isolation suite against the Firestore emulator |
+| `npm test` | Vault crypto + cross-user isolation |
+| `npm run test:vault` | 14 WebCrypto tests — round trip, wrong key, tampering, non-extractability |
+| `npm run test:rules` | 26 isolation tests against the Firestore emulator (needs Java) |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run verify:cloud` | Read-only check of the whole Google Cloud setup |
 | `npm run verify:no-secrets` | Greps the built client bundle for keys — run after `npm run build` |
 | `npm run emulators` | Firestore + Auth emulators for local development |
 
 ## Status
 
-**Days 1-2 complete.** The trust boundary is in - auth, secrets, path-scoped tenancy, rate
-limiting, the AI call ledger, injection heuristics, security headers - and so is the product
-surface: the Quiet Ink design system, the three-pane shell, the conversation canvas with
-streamed word reveal, the command palette, and the Closing Ritual driven by Gemini structured
-output.
+**Days 1-3 complete.** All four core requirements and all four enhancements are implemented.
 
-Verified locally: 26/26 isolation tests, clean build and lint, route protection, CSRF
-rejection, forged-cookie rejection, and no secrets in the client bundle.
+| | |
+|---|---|
+| Authentication | httpOnly session cookies, revocation-checked, no JS-readable credential |
+| Multi-turn AI | Four modes, streamed, with structured auto-summarization |
+| Isolated storage | Path-scoped tenancy, deny-by-default rules, 26 passing isolation tests |
+| Secret management | Runtime Secret Manager retrieval behind a `server-only` build guard |
+| Zero-Knowledge Vault | Client-side AES-256-GCM, 14 passing crypto tests |
+| Privacy Ledger | Append-only per-user record of every model call, plus export and delete |
+| Emotional Weather | Mood ribbon and theme constellation from structured output |
+| Ask Your Past | Cited retrieval over your own summaries |
 
-Still needed: a Google Cloud project for the live sign-in, chat and distil run. See
-[07 - Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
+Verified locally without a single model call: 40 tests green, clean build and lint, route
+protection, CSRF rejection, forged-cookie rejection, and no secrets in the client bundle.
 
-Day 3 next: the Zero-Knowledge Vault, Privacy Ledger, Emotional Weather, and Ask Your Past.
+Still needed: billing on the Google Cloud project, so the Gemini key can be added to Secret
+Manager and the live path exercised. See [07 - Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).

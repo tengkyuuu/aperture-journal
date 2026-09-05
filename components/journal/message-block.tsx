@@ -31,14 +31,26 @@ export function MessageBlock({
   role,
   content,
   streaming = false,
+  sealed = false,
 }: {
   role: 'user' | 'model';
   content: string;
   streaming?: boolean;
+  /** Decrypted in this browser. Marked so the reader knows what they are looking at. */
+  sealed?: boolean;
 }) {
   if (role === 'user') {
     return (
-      <article className="prose-journal whitespace-pre-wrap text-ink">{content}</article>
+      <article className="relative prose-journal whitespace-pre-wrap text-ink">
+        {sealed ? (
+          <span
+            aria-hidden
+            className="absolute -left-4 top-[0.9em] size-1.5 rounded-full bg-sealed"
+            title="Sealed — decrypted locally"
+          />
+        ) : null}
+        {content}
+      </article>
     );
   }
 
@@ -64,15 +76,30 @@ export function MessageBlock({
   );
 }
 
-/** A sealed message. The plaintext does not exist on the server to render. */
-export function SealedBlock() {
+/**
+ * A sealed message with the vault locked.
+ *
+ * There is genuinely nothing to render here: the server holds ciphertext, and
+ * this component has no key. That is not a loading state, it is the guarantee
+ * working — so it says so rather than showing a spinner.
+ */
+export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
   return (
-    <article className="flex items-center gap-2.5 rounded-card border border-dashed border-sealed/40 bg-sealed/[0.04] px-4 py-3">
-      <span className="size-1.5 rounded-full bg-sealed" aria-hidden />
+    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border border-dashed border-sealed/40 bg-sealed/[0.04] px-4 py-3">
+      <span className="size-1.5 shrink-0 rounded-full bg-sealed" aria-hidden />
       <p className="text-[13px] text-ink-3">
         <span className="text-sealed">Sealed.</span> Only your passphrase opens this — not us,
         not Gemini.
       </p>
+      {onUnlock ? (
+        <button
+          type="button"
+          onClick={onUnlock}
+          className="ml-auto rounded-full border border-sealed/40 px-2.5 py-1 text-[11.5px] text-sealed transition-colors hover:bg-sealed/10"
+        >
+          Unlock
+        </button>
+      ) : null}
     </article>
   );
 }

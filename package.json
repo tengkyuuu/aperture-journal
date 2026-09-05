@@ -11,7 +11,9 @@
     "emulators": "firebase emulators:start --only firestore,auth --project demo-aperture",
     "test:rules": "firebase emulators:exec --only firestore --project demo-aperture \"vitest run tests/rules.test.ts\"",
     "verify:no-secrets": "node scripts/verify-no-secrets.mjs",
-    "verify:cloud": "node scripts/verify-cloud.mjs"
+    "verify:cloud": "node scripts/verify-cloud.mjs",
+    "test:vault": "vitest run tests/vault.test.ts",
+    "test": "vitest run tests/vault.test.ts && npm run test:rules"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^7.0.0",

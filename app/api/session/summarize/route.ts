@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { requireUid } from '@/lib/server/auth';
 import { assertSafeId, messagesCol, sessionDoc } from '@/lib/server/db';
-import { summarizeSession } from '@/lib/server/gemini';
+import { embed, estimateTokens, summarizeSession } from '@/lib/server/gemini';
 import { assertSameOrigin, BadRequest, parseBody, toErrorResponse } from '@/lib/server/http';
 import { recordAiCall } from '@/lib/server/ledger';
 import { log, uidTag } from '@/lib/server/logger';
@@ -69,11 +69,45 @@ export async function POST(req: Request) {
 
     const insights = parsed.data;
 
+    /**
+     * Embed the SUMMARY, never the raw messages.
+     *
+     * Two reasons, both load-bearing. A summary is content the user already
+     * agreed to have generated, so embedding it escalates nothing. And an
+     * embedding is a lossy encoding of whatever went into it — embedding raw
+     * entries would quietly put a derivative of every private sentence into a
+     * field that later gets shipped around for retrieval.
+     *
+     * Best-effort: if this fails, the session still closes with its summary
+     * intact and simply is not searchable. Losing the distillation because
+     * retrieval had a bad day would be the wrong trade.
+     */
+    let embedding: number[] | undefined;
+    try {
+      const result = await embed(`${insights.title}. ${insights.summary}`, 'RETRIEVAL_DOCUMENT');
+      embedding = result.values;
+
+      await recordAiCall(uid, {
+        route: '/api/session/summarize',
+        model: MODELS.embedding,
+        purpose: 'embed',
+        inputTokens: estimateTokens(insights.summary),
+        outputTokens: 0,
+        latencyMs: Date.now() - startedAt,
+        dataClasses: ['summary_only'],
+        sealedExcluded: 0,
+        sessionId,
+      });
+    } catch {
+      log.warn('embedding_failed', { route: '/api/session/summarize', sessionId });
+    }
+
     await ref.set(
       {
         title: insights.title,
         summary: insights.summary,
         insights,
+        ...(embedding ? { embedding } : {}),
         status: 'closed',
         endedAt: FieldValue.serverTimestamp(),
       },

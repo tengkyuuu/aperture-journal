@@ -41,7 +41,11 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
           ) : null}
         </div>
 
-        {meta.title ? (
+        {meta.sealed ? (
+          <h1 className="mt-3 font-serif text-[30px] font-light leading-tight tracking-tight text-ink sm:text-[34px]">
+            Sealed entry
+          </h1>
+        ) : meta.title ? (
           <h1 className="mt-3 font-serif text-[30px] font-light leading-tight tracking-tight text-ink sm:text-[34px]">
             {meta.title}
           </h1>
@@ -54,6 +58,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         initialInsights={insights}
         initialMode={meta.mode}
         closed={meta.status === 'closed'}
+        sealed={meta.sealed}
         placeholder="Pick the thread back up…"
       />
     </div>

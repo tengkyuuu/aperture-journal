@@ -61,13 +61,52 @@ export interface SessionSummary {
 export interface StoredMessage {
   id: string;
   role: 'user' | 'model';
+  /** Present only when `sealed` is false. */
   content: string | null;
+  /** Present only when `sealed` is true. base64(iv + ciphertext + tag). */
+  cipher: string | null;
   sealed: boolean;
   createdAt: string | null;
+}
+
+/**
+ * Vault parameters. Neither field is secret: the salt defeats precomputed
+ * tables, and `check` is a known constant encrypted under the derived key so a
+ * passphrase can be verified without storing anything derived from it.
+ */
+export interface VaultInfo {
+  salt: string;
+  check: string;
 }
 
 export interface UserProfile {
   displayName: string | null;
   email: string | null;
   photoURL: string | null;
+  vault: VaultInfo | null;
+}
+
+/** One row of the Privacy Ledger, as rendered on the Security page. */
+export interface AiCall {
+  id: string;
+  at: string | null;
+  route: string;
+  model: string;
+  purpose: 'chat' | 'summarize' | 'embed' | 'ask';
+  inputTokens: number;
+  outputTokens: number;
+  estCostUsd: number;
+  latencyMs: number;
+  dataClasses: string[];
+  sealedExcluded: number;
+  sessionId: string | null;
+}
+
+export interface SecurityEvent {
+  id: string;
+  at: string | null;
+  kind: string;
+  severity: 'low' | 'medium' | 'high';
+  detail: string;
+  sessionId: string | null;
 }
