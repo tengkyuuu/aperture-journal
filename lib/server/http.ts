@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { ZodError, type ZodType } from 'zod';
 
 import { assertAppCheck, FailedAttestation } from './appcheck';
+import { errorStatus, ProviderBusy } from './gemini';
 import { Unauthenticated } from './auth';
 import { log } from './logger';
 
@@ -101,15 +102,24 @@ export function toErrorResponse(err: unknown, route: string): NextResponse {
   if (err instanceof BadRequest) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   }
+  if (err instanceof ProviderBusy) {
+    // 503, not 500 and not 429. It is not our quota the caller hit, and it is
+    // not a bug — it is worth trying again shortly.
+    return NextResponse.json({ error: 'provider_busy' }, { status: 503 });
+  }
   if (err instanceof FailedAttestation) {
     // 403, not 401: the credential may well be valid — the client is not.
     return NextResponse.json({ error: 'failed_attestation' }, { status: 403 });
   }
 
   // Unexpected. Log the shape, never the payload, and tell the client nothing.
+  // The status is safe to log and is the single most useful thing for
+  // diagnosis. An opaque "ApiError" in a production log tells you nothing —
+  // which is exactly the hole this fills.
   log.error('unhandled_route_error', {
     route,
     code: err instanceof Error ? err.name : 'unknown',
+    status: errorStatus(err) ?? undefined,
   });
   return NextResponse.json({ error: 'internal' }, { status: 500 });
 }

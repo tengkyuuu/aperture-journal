@@ -56,6 +56,8 @@ export function AskView() {
           setError(data.message ?? 'There is nothing to search yet.');
         } else if (res.status === 429) {
           setError("You've reached today's limit. It resets at midnight UTC.");
+        } else if (res.status === 503) {
+          setError('Gemini is busy right now. Try that question again in a moment.');
         } else {
           setError('That question did not go through. Try again.');
         }

@@ -3,6 +3,7 @@ import 'server-only';
 import { GoogleGenAI, Type, type Content, type Schema } from '@google/genai';
 
 import { UNTRUSTED_CONTENT_RULE } from './injection';
+import { log } from './logger';
 import { getSecret } from './secrets';
 import { LIMITS, MODELS, type ConversationMode } from '../config';
 
@@ -107,6 +108,106 @@ export function systemInstructionFor(mode: ConversationMode, extra?: string): st
   return [PERSONAS[mode], VOICE, SAFETY_CLAUSE, extra?.trim()].filter(Boolean).join('\n\n');
 }
 
+// ─── Transient failure handling ──────────────────────────────────────────────
+
+/**
+ * Retry transient failures, honouring what the API asks for.
+ *
+ * Two things learned from the live API rather than the docs:
+ *
+ *   1. 503 "This model is currently experiencing high demand" happens. A
+ *      single retry usually turns it into a slightly slower response.
+ *   2. A 429 carries a RetryInfo with an explicit `retryDelay` — 3s, or 59s
+ *      when a per-minute window has to roll over. Backing off 400ms against
+ *      that is pure noise: it burns the retry budget and hits the same wall.
+ *      So we wait what we are told to wait.
+ *
+ * Deliberately narrow: 429 and 5xx only. A 400 means we sent something the
+ * model rejects every time — `thinkingBudget: 0` on 3.6/3.8 does exactly this
+ * — and retrying it just spends time to reach the same failure.
+ *
+ * The wait is capped. If the API asks for 59s, that is a genuine quota wall,
+ * and holding a request handler open for a minute serves nobody: fail fast and
+ * let the caller see an honest "the model is busy" instead.
+ */
+const MAX_BACKOFF_MS = 8_000;
+
+/**
+ * Pull the HTTP status out of an SDK error without depending on its shape.
+ *
+ * Prefers the structured "code": NNN that the API actually returns. The loose
+ * fallback is anchored on word boundaries deliberately - an unanchored
+ * three-digit match over an error string will happily pick three digits out of
+ * a token count or a timestamp and report a 429 that never happened.
+ */
+export function errorStatus(err: unknown): number | null {
+  const text = String(err);
+
+  const structured = /"code"\s*:\s*(\d{3})\b/.exec(text);
+  if (structured) return Number(structured[1]);
+
+  const loose = /\b(4\d{2}|5\d{2})\b/.exec(text);
+  return loose ? Number(loose[1]) : null;
+}
+
+/** The API tells us how long to wait. Believe it. */
+function suggestedDelayMs(err: unknown): number | null {
+  const m = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(String(err));
+  return m ? Math.round(Number(m[1]) * 1000) : null;
+}
+
+export class ProviderBusy extends Error {
+  constructor() {
+    super('PROVIDER_BUSY');
+    this.name = 'ProviderBusy';
+  }
+}
+
+async function withRetry<T>(label: string, fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const status = errorStatus(err);
+      const text = String(err);
+      const transient =
+        status === 429 ||
+        (status !== null && status >= 500) ||
+        /high demand|overloaded|UNAVAILABLE|DEADLINE_EXCEEDED/i.test(text);
+
+      if (!transient || i === attempts - 1) break;
+
+      const asked = suggestedDelayMs(err);
+      if (asked !== null && asked > MAX_BACKOFF_MS) {
+        // A wall, not a blip. Stop rather than hold the request open.
+        log.warn('gemini_quota_wall', { reason: label, status, durationMs: asked });
+        break;
+      }
+
+      const backoff = asked ?? 800 * 3 ** i + Math.random() * 400;
+      log.warn('gemini_retry', {
+        reason: label,
+        status,
+        count: i + 1,
+        durationMs: Math.round(backoff),
+      });
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+
+  // A provider rate limit is not our bug and not an internal error. Surfacing
+  // it as one would send the user a generic 500 for something they can simply
+  // retry in a moment.
+  if (errorStatus(lastError) === 429) {
+    log.warn('gemini_rate_limited', { reason: label, status: 429 });
+    throw new ProviderBusy();
+  }
+  throw lastError;
+}
+
 // ─── Token estimation ────────────────────────────────────────────────────────
 
 /**
@@ -140,7 +241,8 @@ export async function streamChat(
 ): Promise<StreamResult> {
   const ai = await client();
 
-  const response = await ai.models.generateContentStream({
+  const response = await withRetry('chat', () =>
+    ai.models.generateContentStream({
     model: MODELS.chat,
     contents,
     config: {
@@ -152,7 +254,8 @@ export async function streamChat(
       thinkingConfig: { thinkingBudget: 0 },
       abortSignal: signal,
     },
-  });
+    }),
+  );
 
   let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
   const usage = new Promise<{ inputTokens: number; outputTokens: number }>((r) => {
@@ -216,8 +319,20 @@ const INSIGHT_SCHEMA: Schema = {
     mood: {
       type: Type.OBJECT,
       properties: {
-        valence: { type: Type.NUMBER, description: '-1 heavy … 1 light' },
-        energy: { type: Type.NUMBER, description: '0 flat … 1 charged' },
+        valence: {
+          type: Type.NUMBER,
+          description:
+            'How the session FELT, from -1 to 1. NEGATIVE for heavy, difficult, ' +
+            'anxious, sad, frustrated or draining. POSITIVE for light, hopeful, ' +
+            'satisfied or energising. 0 for genuinely neutral. An anxious or ' +
+            'worried session MUST be negative even if something went well in it.',
+        },
+        energy: {
+          type: Type.NUMBER,
+          description:
+            'How activated the session felt, 0 to 1. 0 is flat, numb or exhausted; ' +
+            '1 is charged, urgent or intense. Independent of whether it felt good.',
+        },
         label: { type: Type.STRING, description: 'One or two words for the feeling.' },
       },
       required: ['valence', 'energy', 'label'],
@@ -314,7 +429,8 @@ export async function summarizeSession(
 ): Promise<SummaryResult> {
   const ai = await client();
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry('summarize', () =>
+    ai.models.generateContent({
     model: MODELS.synthesis,
     contents: toContents(turns),
     config: {
@@ -324,7 +440,8 @@ export async function summarizeSession(
       temperature: 0.4,
       maxOutputTokens: 1600,
     },
-  });
+    }),
+  );
 
   const text = response.text;
   if (!text) throw new Error('EMPTY_SUMMARY');
@@ -374,11 +491,13 @@ export async function embed(
 ): Promise<EmbedResult> {
   const ai = await client();
 
-  const res = await ai.models.embedContent({
-    model: MODELS.embedding,
-    contents: text,
-    config: { outputDimensionality: EMBED_DIMS, taskType },
-  });
+  const res = await withRetry('embed', () =>
+    ai.models.embedContent({
+      model: MODELS.embedding,
+      contents: text,
+      config: { outputDimensionality: EMBED_DIMS, taskType },
+    }),
+  );
 
   const values = res.embeddings?.[0]?.values;
   if (!values?.length) throw new Error('EMBED_EMPTY');
@@ -414,7 +533,8 @@ export async function streamGroundedAnswer(
 ): Promise<StreamResult> {
   const ai = await client();
 
-  const response = await ai.models.generateContentStream({
+  const response = await withRetry('ask', () =>
+    ai.models.generateContentStream({
     model: MODELS.chat,
     contents: [
       {
@@ -429,7 +549,8 @@ export async function streamGroundedAnswer(
       thinkingConfig: { thinkingBudget: 0 },
       abortSignal: signal,
     },
-  });
+    }),
+  );
 
   let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
   const usage = new Promise<{ inputTokens: number; outputTokens: number }>((r) => {

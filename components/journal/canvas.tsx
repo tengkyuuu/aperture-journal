@@ -142,7 +142,9 @@ export function Canvas({
         setError(
           res.status === 429
             ? "You've reached today's limit. It resets at midnight UTC."
-            : 'That did not go through. Your entry is still in the box above.',
+            : res.status === 503
+              ? 'Gemini is busy right now. Your entry is still here — try again in a moment.'
+              : 'That did not go through. Your entry is still in the box above.',
         );
         setInput(message);
         setTurns((t) => t.slice(0, -2));
@@ -202,7 +204,9 @@ export function Canvas({
         setError(
           res.status === 422
             ? 'There is not enough here to distil yet. Write a little more.'
-            : 'The summary did not come through. Your session is safe — try ending it again.',
+            : res.status === 503
+              ? 'Gemini is busy right now. Your session is safe — try ending it again shortly.'
+              : 'The summary did not come through. Your session is safe — try ending it again.',
         );
         return;
       }

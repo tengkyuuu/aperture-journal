@@ -3,7 +3,7 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 
 import { aiCallsCol, securityEventsCol } from './db';
-import { PRICING_PER_MTOK } from '../config';
+import { FALLBACK_PRICE_PER_MTOK, PRICING_PER_MTOK } from '../config';
 import { log } from './logger';
 
 /**
@@ -39,8 +39,7 @@ export interface LedgerEntry {
 }
 
 function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const p = PRICING_PER_MTOK[model];
-  if (!p) return 0;
+  const p = PRICING_PER_MTOK[model] ?? FALLBACK_PRICE_PER_MTOK;
   return (inputTokens / 1_000_000) * p.input + (outputTokens / 1_000_000) * p.output;
 }
 

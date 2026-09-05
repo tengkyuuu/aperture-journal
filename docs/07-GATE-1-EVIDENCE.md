@@ -438,3 +438,103 @@ Neither is billing-related; both were always manual.
    Paste, then Ctrl+Z and Enter on Windows. This keeps the key out of shell history.
 
 `npm run verify:cloud` goes 24/24 once both are done.
+
+---
+
+# Live verification — what running it actually found
+
+Two new checks exist now, and between them they caught five real problems that
+every offline check had passed.
+
+| Command | Checks |
+|---|---|
+| `npm run verify:gemini` | Secret Manager → Gemini: chat, structured output, embeddings |
+| `npm run test:e2e` | Two real users through the whole app, then a leak attempt |
+
+`test:e2e` signs in with **custom tokens** rather than the Google popup. Same server path —
+same `verifyIdToken`, same `auth_time` freshness check, same session cookie — only the popup
+is skipped, and the popup is not the security control. It creates test users and deletes them
+and everything they wrote afterwards.
+
+## Verified working against the live API ✅
+
+From a full run before the free-tier quota ran out:
+
+```
+Authentication          alice + bob signed in, unauthenticated chat -> 401
+Multi-turn              turn 1 streamed 8.2s, turn 2 streamed, 4 messages under alice
+Closing Ritual          "Unease after the launch", uneasy fatigue (valence -0.5, energy 0.4)
+                        themes: work, sleep, anxiety · embedding 768 dims
+Ask Your Past           grounded answer with 1 citation and inline [[id]] markers
+Privacy Ledger          6 rows across ask, chat, embed, summarize · $0.001474
+Cross-user isolation    bob 404s on alice's session, 400s on summarize and seal,
+                        his retrieval finds nothing of hers
+Data rights             export returns 1 session and 6 ledger rows
+```
+
+## Five bugs the live run found
+
+### 1. `gemini-2.5-flash` no longer exists
+
+404, *"no longer available to new users"*. Every offline test passed against a model the API
+had already retired — exactly the drift the plan flagged as a standing risk on Day 0, which is
+why every model id lives in one file.
+
+### 2. `gemini-3.6-flash` and `3.8-flash` reject `thinkingBudget: 0`
+
+A bare `400 invalid argument`, with nothing pointing at the cause. Measured across all
+candidates and pinned `gemini-3.5-flash`, which accepts it and answers in ~1.4s rather than
+~3.5s. The finding and the migration warning are recorded in `lib/config.ts`.
+
+### 3. `notFound()` was returning **HTTP 200**
+
+The Day 4 `loading.tsx` at the `(app)` layout level created a Suspense boundary, which makes
+Next flush the response — and commit a 200 — before the page finishes. A later `notFound()`
+then rendered the 404 page under a success status.
+
+**Not a data leak.** A canary test confirmed bob received the not-found page with none of
+alice's content while alice read her own correctly. But a 404 that reports 200 misleads caches,
+crawlers and monitoring. Fixed by moving the loading boundaries into the five routes that
+cannot 404 and leaving `/session/[id]` without one.
+
+Only a status-asserting test catches this. A test that checked the body would have passed.
+
+### 4. Provider rate limits surfaced as `500 internal`
+
+A Gemini 429 is not our bug and not an internal error. It now maps to `503 provider_busy`, and
+the UI says *"Gemini is busy right now — your entry is still here"* rather than a generic
+failure. The retry also now **honours the `retryDelay` the API returns** (3s, sometimes 59s)
+instead of a fixed 400ms, and gives up rather than holding a request open for a minute.
+
+The opaque `ApiError` in the logs was the redaction allowlist working correctly and being
+useless for diagnosis — the HTTP status is now logged, since a status is not sensitive.
+
+### 5. The e2e had a false pass
+
+Turn 2 asserted on the response body, and draining a 503 yields its JSON error payload — which
+is non-empty, so a failed call reported success. It checks the status first now. A test that
+passes on an error response is worse than no test.
+
+---
+
+## The remaining blocker: Gemini quota
+
+The `aperture-journal` key returns **`429 prepayment credits are depleted`** on every model.
+Cloud Billing is entirely healthy — account open, project linked, API enabled — so this is a
+separate AI Studio credit pool, managed at https://ai.studio/projects.
+
+As a working substitute, the key currently in Secret Manager (version 2) belongs to
+`gen-lang-client-0984613213`, your existing free-tier AI Studio project. That works, but the
+free tier has a **per-day** quota that this session's testing exhausted.
+
+**Before the demo, get paid Gemini access.** Either restore credits on `aperture-journal` and
+add its key as a new secret version, or upgrade the free-tier project. Note what switching
+costs: one `gcloud secrets versions add`, no code change, no redeploy. That is the Secret
+Manager design paying for itself.
+
+```
+gcloud secrets versions add GEMINI_API_KEY --data-file=- --project=aperture-journal
+```
+
+Version 1 of the secret is the `aperture-journal` key, already scoped to the Gemini API and
+ready the moment credits exist.

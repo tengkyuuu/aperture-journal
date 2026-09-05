@@ -75,6 +75,8 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | `npm run test:rules` | 26 isolation tests against the Firestore emulator (needs Java) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run verify:cloud` | Read-only check of the whole Google Cloud setup |
+| `npm run verify:gemini` | Secret Manager to Gemini: chat, structured output, embeddings |
+| `npm run test:e2e` | Two real users through the whole app, then a leak attempt |
 | `npm run verify:no-secrets` | Scans the built bundle for keys; add `-- --history` to scan every commit |
 | `npm run emulators` | Firestore + Auth emulators for local development |
 
@@ -99,5 +101,11 @@ Verified locally, with no model call required: **40 tests green**, clean build, 
 typecheck, route protection, CSRF rejection, forged-cookie rejection, no secrets in the bundle
 or in git history.
 
-Two Console toggles remain before a live run — the Google sign-in provider and the Gemini API
-key. Both are listed in [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
+Verified **against the live API**: sign-in, streamed multi-turn conversation, structured
+summaries with correct mood polarity, 768-dim embeddings, grounded answers with citations, the
+ledger, export, and bob 404ing on alice's session. Running it for real found five bugs every
+offline check had passed — including a `notFound()` returning HTTP 200. All fixed; details in
+[07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
+
+Remaining before a demo: **paid Gemini access** (the free-tier daily quota is the only
+blocker) and the Google sign-in Console toggle.
