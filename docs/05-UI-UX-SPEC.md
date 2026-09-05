@@ -1,5 +1,8 @@
 # UI/UX Design Contract — "Quiet Ink"
 
+> **Status: implemented, and extended past the original contract.** See
+> "What shipped beyond this contract" at the end.
+
 ## Design thesis
 
 **This is a notebook, not a chatbot.** Every AI journaling app on the internet is a chat
@@ -184,3 +187,66 @@ using it for screen generation both accelerates Day 2 and strengthens the
 "built with Google tooling" narrative. Suggested flow: create a design system from these
 tokens, generate the eight screens from the descriptions above, then hand-build the three
 signature moments (Stitch will not give you the seal animation or the closing ritual).
+
+---
+
+## What shipped beyond this contract
+
+An audit against this document found three promises unbuilt and one piece of
+dead code. Fixing them turned up a product gap worth more than any of them.
+
+### Today is a home, not just a composer
+
+The contract asked for the composer plus a weather strip and session cards. It
+had only the composer. It now carries, **below** the composer in this order:
+
+1. **Still open** — unresolved threads carried forward
+2. **Last two weeks** — a compact weather strip and the writing streak
+3. **Lately** — recent sessions as typographic cards
+
+The order is the design. Putting the chart at the top would make this an
+analytics page about a journal rather than a journal.
+
+### Open loops — the gap the audit actually found
+
+The summarizer has always extracted `openLoops`, stored them, and then never
+shown them again outside the session that produced them. A journal that notices
+an unresolved thread and forgets it has the failure mode it exists to prevent.
+
+They now surface on Today, attributed to the session and date they came from.
+
+Deliberately **not** a to-do list: no checkbox, no "done", no count remaining.
+An open loop is a question worth sitting with, and an unchecked box would make
+an unanswered question feel like a failure — the opposite of the point.
+
+### The ambient mood tint was dead code
+
+`--mood-tint` was defined in `globals.css` and consumed by `body`, and nothing
+ever set it. It now drifts with the fortnight's mood, under three constraints
+that make it safe rather than merely pretty:
+
+- **Background only.** No text token moves, so no contrast ratio can degrade.
+- **Mixed in `oklab` from the semantic tokens**, so it follows the theme rather
+  than being a wash that looks wrong in one of them.
+- **Capped at ~7%, and off entirely for a neutral fortnight.** A tint that is
+  always on is a gradient; one that appears only when there is something to say
+  is information.
+
+### Keyboard-first, finally made discoverable
+
+The shortcuts existed and were documented nowhere a user would look. `?` now
+opens a reference — suppressed while typing, because stealing a question mark
+mid-sentence in a journal would be unforgivable.
+
+### Two more
+
+- **Skip link.** Tabbing in previously meant traversing a five-item rail and a
+  fifty-item session list before reaching the writing.
+- **Timeline grouped by date** — Today, Yesterday, This week, then by month.
+  "Yesterday" is a better landmark than a timestamp you have to convert.
+- **A real favicon.** The tab showed the Next.js default, which is a small
+  thing that looks unfinished in every screenshot.
+
+All of it is covered by `npm run test:e2e`, which asserts the rendered HTML —
+open loops that a query returns but nobody sees would be the exact bug this
+work set out to fix.

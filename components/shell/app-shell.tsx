@@ -9,6 +9,7 @@ import { initials } from '@/lib/shared/format';
 import type { SessionSummary, UserProfile } from '@/lib/shared/types';
 
 import { CommandPalette } from './command-palette';
+import { Shortcuts } from './shortcuts';
 import { IconClose, IconMenu } from './icons';
 import { NAV } from './nav';
 import { ThemeToggle } from './theme-toggle';
@@ -59,6 +60,18 @@ export function AppShell({
 
   return (
     <div className="flex min-h-dvh">
+      {/*
+        Skip link. Tabbing into this app otherwise means traversing a 5-item
+        rail and a 50-item session list before reaching the writing — which is
+        the one thing everybody came for. Visually hidden until focused.
+      */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-control focus:bg-accent focus:px-4 focus:py-2 focus:text-[13px] focus:font-medium focus:text-on-accent"
+      >
+        Skip to writing
+      </a>
+
       {/* ── Rail ─────────────────────────────────────────────────────────── */}
       <aside className="sticky top-0 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r border-line bg-surface py-4 md:flex">
         <Link
@@ -126,7 +139,9 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 pb-20 md:pb-0">{children}</main>
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 pb-20 md:pb-0">
+          {children}
+        </main>
 
         {/* Bottom tab bar below md, where there is no rail. */}
         <nav
@@ -191,6 +206,7 @@ export function AppShell({
       ) : null}
 
       <CommandPalette sessions={sessions} />
+      <Shortcuts />
     </div>
   );
 }

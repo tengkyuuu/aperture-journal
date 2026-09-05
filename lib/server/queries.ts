@@ -7,6 +7,7 @@ import type { ConversationMode } from '../config';
 import type {
   AiCall,
   Insights,
+  Mood,
   SecurityEvent,
   SessionSummary,
   StoredMessage,
@@ -147,4 +148,98 @@ export async function listSealedSessions(uid: string, limit = 200): Promise<Sess
     .limit(limit)
     .get();
   return snap.docs.map((d) => toSessionSummary(d.id, d.data()));
+}
+
+// ── Home digest ──────────────────────────────────────────────────────────────
+
+export interface OpenLoop {
+  text: string;
+  sessionId: string;
+  sessionTitle: string;
+  at: string | null;
+}
+
+export interface HomeDigest {
+  /** Closed sessions from the last 14 days, newest first. */
+  recent: SessionSummary[];
+  /** Unresolved threads carried forward from recent sessions. */
+  openLoops: OpenLoop[];
+  /** Average mood across the last two weeks, or null when there is none. */
+  weekMood: Mood | null;
+  /** Consecutive days ending today on which something was written. */
+  streak: number;
+  totalSessions: number;
+}
+
+/**
+ * Everything the Today screen needs, in one pass.
+ *
+ * SECURITY PRECONDITION: `uid` comes from requireUid().
+ *
+ * Open loops are the interesting part. The summarizer already extracts the
+ * threads a session left unresolved, and until now they were written down and
+ * never seen again — which is precisely the thing a journal is supposed to be
+ * good at. Carrying them forward is what makes the app feel like it remembers.
+ */
+export async function getHomeDigest(uid: string): Promise<HomeDigest> {
+  const snap = await sessionsCol(uid).orderBy('startedAt', 'desc').limit(60).get();
+
+  const all = snap.docs.map((d) => ({
+    summary: toSessionSummary(d.id, d.data()),
+    insights: d.get('insights') as Insights | undefined,
+  }));
+
+  const twoWeeksAgo = Date.now() - 14 * 86_400_000;
+  const withinFortnight = all.filter(
+    (s) => s.summary.startedAt && new Date(s.summary.startedAt).getTime() > twoWeeksAgo,
+  );
+
+  const openLoops: OpenLoop[] = [];
+  for (const { summary, insights } of all) {
+    // Sealed sessions have no insights — sealing deletes them — so they cannot
+    // contribute a loop, which is correct: a sealed thread stays sealed.
+    for (const text of insights?.openLoops ?? []) {
+      openLoops.push({
+        text,
+        sessionId: summary.id,
+        sessionTitle: summary.title ?? 'Untitled',
+        at: summary.startedAt,
+      });
+    }
+    if (openLoops.length >= 6) break;
+  }
+
+  const moods = withinFortnight.map((s) => s.summary.mood).filter((m): m is Mood => m !== null);
+  const weekMood =
+    moods.length === 0
+      ? null
+      : {
+          valence: moods.reduce((n, m) => n + m.valence, 0) / moods.length,
+          energy: moods.reduce((n, m) => n + m.energy, 0) / moods.length,
+          label: moods.length === 1 ? moods[0]!.label : `${moods.length} sessions`,
+        };
+
+  // Consecutive days ending today (or yesterday — today may not have happened
+  // yet, and breaking someone's streak at 00:01 would be a small cruelty).
+  const days = new Set(
+    all
+      .map((s) => s.summary.startedAt)
+      .filter((d): d is string => d !== null)
+      .map((d) => new Date(d).toDateString()),
+  );
+  let streak = 0;
+  const cursor = new Date();
+  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  while (days.has(cursor.toDateString())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return {
+    recent: withinFortnight.map((s) => s.summary).slice(0, 6),
+    openLoops: openLoops.slice(0, 4),
+    weekMood,
+    streak,
+    totalSessions: all.length,
+  };
 }

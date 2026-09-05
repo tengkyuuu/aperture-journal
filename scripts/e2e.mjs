@@ -215,6 +215,25 @@ try {
     bad('summarize', `${sum.status} ${(await sum.text()).slice(0, 120)}`);
   }
 
+  // ── Today digest ─────────────────────────────────────────────────────────
+  // The Today screen carries open loops forward from past sessions. Asserting
+  // the rendered HTML because the value of this feature is that it SHOWS UP —
+  // a query that returns loops nobody sees is the bug it was built to fix.
+  section('Today digest');
+  {
+    const home = await fetch(`${BASE}/today`, { headers: { Cookie: aliceCookie } });
+    const html = await home.text();
+
+    home.ok ? ok('today renders', String(home.status)) : bad('today', String(home.status));
+    html.includes('Still open')
+      ? ok('open loops carried forward')
+      : bad('open loops', 'section absent after a session with unresolved threads');
+    html.includes('Lately') ? ok('recent sessions listed') : bad('recent sessions', 'absent');
+    html.includes('Skip to writing')
+      ? ok('skip link present')
+      : bad('skip link', 'absent');
+  }
+
   // ── Ask Your Past ────────────────────────────────────────────────────────
   section('Ask Your Past');
   await pace();

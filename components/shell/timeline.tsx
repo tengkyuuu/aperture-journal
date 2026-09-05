@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -9,6 +10,33 @@ import type { SessionSummary } from '@/lib/shared/types';
 
 import { IconVault } from './icons';
 
+/**
+ * Group by when, not by page.
+ *
+ * A flat list of fifty sessions is a scroll, not a timeline. Buckets give the
+ * eye somewhere to land, and "Yesterday" is a far better landmark than a
+ * timestamp you have to read and convert.
+ */
+function bucketFor(iso: string | null): string {
+  if (!iso) return 'Undated';
+  const then = new Date(iso);
+  const now = new Date();
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysBack = Math.floor((startOfToday.getTime() - then.getTime()) / 86_400_000);
+
+  if (daysBack < 0) return 'Today';
+  if (daysBack === 0) return 'Today';
+  if (daysBack === 1) return 'Yesterday';
+  if (daysBack < 7) return 'This week';
+  if (daysBack < 30) return 'This month';
+
+  return then.toLocaleDateString(undefined, {
+    month: 'long',
+    ...(then.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+  });
+}
+
 export function Timeline({
   sessions,
   onNavigate,
@@ -17,6 +45,17 @@ export function Timeline({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+
+  const groups = useMemo(() => {
+    const out: { label: string; items: SessionSummary[] }[] = [];
+    for (const s of sessions) {
+      const label = bucketFor(s.startedAt);
+      const last = out[out.length - 1];
+      if (last?.label === label) last.items.push(s);
+      else out.push({ label, items: [s] });
+    }
+    return out;
+  }, [sessions]);
 
   return (
     <div className="flex h-full flex-col">
@@ -37,63 +76,71 @@ export function Timeline({
         </p>
       ) : (
         <nav aria-label="Your sessions" className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-          <ul className="flex flex-col gap-px">
-            {sessions.map((s) => {
-              const active = pathname === `/session/${s.id}`;
-              return (
-                <li key={s.id}>
-                  <Link
-                    href={`/session/${s.id}`}
-                    onClick={onNavigate}
-                    aria-current={active ? 'page' : undefined}
-                    className={`group flex flex-col gap-1 rounded-control px-3 py-2.5 transition-colors ${
-                      active ? 'bg-sunken' : 'hover:bg-sunken/60'
-                    }`}
-                  >
-                    <div className="flex items-baseline gap-2">
-                      {/* Mood as a dot, always alongside a text label further
-                          down — never colour as the only encoding. */}
-                      <span
-                        aria-hidden
-                        className="mt-1.5 size-1.5 shrink-0 rounded-full"
-                        style={{
-                          background: moodColor(s.mood),
-                          opacity: moodOpacity(s.mood),
-                        }}
-                      />
-                      <span
-                        className={`min-w-0 flex-1 truncate font-serif text-[15px] leading-snug ${
-                          s.title ? 'text-ink' : 'text-ink-3 italic'
+          {groups.map((group) => (
+            <section key={group.label} aria-label={group.label}>
+              <h3 className="label sticky top-0 z-[1] bg-surface/90 px-3 py-2 backdrop-blur-sm">
+                {group.label}
+              </h3>
+
+              <ul className="flex flex-col gap-px pb-2">
+                {group.items.map((s) => {
+                  const active = pathname === `/session/${s.id}`;
+                  return (
+                    <li key={s.id}>
+                      <Link
+                        href={`/session/${s.id}`}
+                        onClick={onNavigate}
+                        aria-current={active ? 'page' : undefined}
+                        className={`group flex flex-col gap-1 rounded-control px-3 py-2.5 transition-colors ${
+                          active ? 'bg-sunken' : 'hover:bg-sunken/60'
                         }`}
                       >
-                        {s.sealed ? 'Sealed entry' : (s.title ?? 'Untitled')}
-                      </span>
-                      {s.sealed ? (
-                        <IconVault className="size-3.5 shrink-0 text-sealed" />
-                      ) : null}
-                    </div>
+                        <div className="flex items-baseline gap-2">
+                          {/* Mood as a dot, always alongside the label below —
+                              never colour as the only encoding. */}
+                          <span
+                            aria-hidden
+                            className="mt-1.5 size-1.5 shrink-0 rounded-full"
+                            style={{
+                              background: moodColor(s.mood),
+                              opacity: moodOpacity(s.mood),
+                            }}
+                          />
+                          <span
+                            className={`min-w-0 flex-1 truncate font-serif text-[15px] leading-snug ${
+                              s.title ? 'text-ink' : 'italic text-ink-3'
+                            }`}
+                          >
+                            {s.sealed ? 'Sealed entry' : (s.title ?? 'Untitled')}
+                          </span>
+                          {s.sealed ? (
+                            <IconVault className="size-3.5 shrink-0 text-sealed" />
+                          ) : null}
+                        </div>
 
-                    <div className="flex items-center gap-1.5 pl-3.5 text-[11px] text-ink-3">
-                      <span className="num">{relativeTime(s.startedAt)}</span>
-                      <span aria-hidden>·</span>
-                      <span>{MODE_LABELS[s.mode] ?? s.mode}</span>
-                      {s.mood ? (
-                        <>
+                        <div className="flex items-center gap-1.5 pl-3.5 text-[11px] text-ink-3">
+                          <span className="num">{relativeTime(s.startedAt)}</span>
                           <span aria-hidden>·</span>
-                          <span className="truncate">{s.mood.label}</span>
-                        </>
-                      ) : s.status === 'open' ? (
-                        <>
-                          <span aria-hidden>·</span>
-                          <span className="text-accent">open</span>
-                        </>
-                      ) : null}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                          <span>{MODE_LABELS[s.mode] ?? s.mode}</span>
+                          {s.mood ? (
+                            <>
+                              <span aria-hidden>·</span>
+                              <span className="truncate">{s.mood.label}</span>
+                            </>
+                          ) : s.status === 'open' ? (
+                            <>
+                              <span aria-hidden>·</span>
+                              <span className="text-accent">open</span>
+                            </>
+                          ) : null}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
         </nav>
       )}
     </div>
