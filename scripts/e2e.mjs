@@ -337,6 +337,104 @@ try {
   const bobSessions = await db.collection(`users/${UIDS.bob}/sessions`).get();
   bobSessions.size === 0 ? ok('bob has no sessions of his own', 'nothing bled across') : bad('bob', `${bobSessions.size} sessions`);
 
+  // ── Profile & settings ───────────────────────────────────────────────────
+  section('Profile & settings');
+  {
+    const page = await fetch(`${BASE}/profile`, { headers: { Cookie: aliceCookie } });
+    const html = await page.text();
+    page.ok ? ok('profile renders', String(page.status)) : bad('profile', String(page.status));
+    html.includes('By the numbers') ? ok('stats section present') : bad('stats', 'absent');
+
+    // `settings` was documented in the data model since Day 1 and nothing ever
+    // wrote one. Assert it round-trips, or the schema is still fiction.
+    const saved = await call(aliceCookie, '/api/account/settings', {
+      defaultMode: 'untangle',
+      reduceMotion: true,
+    });
+    saved.ok ? ok('settings saved', '200') : bad('settings', String(saved.status));
+
+    const doc = await db.doc(`users/${UIDS.alice}`).get();
+    doc.get('settings.defaultMode') === 'untangle'
+      ? ok('defaultMode persisted', 'untangle')
+      : bad('defaultMode', String(doc.get('settings.defaultMode')));
+    doc.get('settings.reduceMotion') === true
+      ? ok('reduceMotion persisted')
+      : bad('reduceMotion', String(doc.get('settings.reduceMotion')));
+
+    const junk = await call(aliceCookie, '/api/account/settings', { defaultMode: 'nonsense' });
+    junk.status === 400 ? ok('invalid mode rejected', '400') : bad('validation', `got ${junk.status}`);
+  }
+
+  // ── Managing one entry ───────────────────────────────────────────────────
+  // Before this existed the only deletion was "delete everything". Losing a
+  // whole history to remove one regretted entry is not a data right.
+  section('Managing one entry');
+  {
+    const renamed = await call(aliceCookie, '/api/session/manage', {
+      action: 'rename',
+      sessionId,
+      title: 'A renamed entry',
+    });
+    renamed.ok ? ok('rename works', '200') : bad('rename', String(renamed.status));
+
+    const after = await db.doc(`users/${UIDS.alice}/sessions/${sessionId}`).get();
+    after.get('title') === 'A renamed entry'
+      ? ok('title persisted')
+      : bad('title', String(after.get('title')));
+
+    // Cross-user, on the NEW routes. Every route gets this, not just the old ones.
+    const bobRename = await call(bobCookie, '/api/session/manage', {
+      action: 'rename',
+      sessionId,
+      title: 'pwned',
+    });
+    bobRename.status === 400
+      ? ok("bob cannot rename alice's entry", '400')
+      : bad('LEAK', `bob got ${bobRename.status} renaming alice's entry`);
+
+    const bobDelete = await call(bobCookie, '/api/session/manage', {
+      action: 'delete',
+      sessionId,
+      confirm: 'DELETE',
+    });
+    bobDelete.status === 400
+      ? ok("bob cannot delete alice's entry", '400')
+      : bad('LEAK', `bob got ${bobDelete.status} deleting alice's entry`);
+
+    const stillThere = await db.doc(`users/${UIDS.alice}/sessions/${sessionId}`).get();
+    stillThere.exists ? ok("alice's entry survived bob", 'untouched') : bad('LEAK', 'bob deleted it');
+
+    // A throwaway fixture, written directly, so the delete test does not cost a
+    // model call or destroy the session the rest of the run depends on.
+    const doomed = db.collection(`users/${UIDS.alice}/sessions`).doc();
+    await doomed.set({ title: 'Doomed', status: 'closed', sealed: false, messageCount: 1 });
+    await doomed.collection('messages').add({ role: 'user', content: 'delete me', sealed: false });
+
+    const weak = await call(aliceCookie, '/api/session/manage', {
+      action: 'delete',
+      sessionId: doomed.id,
+      confirm: 'yes',
+    });
+    weak.status === 400 ? ok('delete needs the typed word', '400') : bad('confirm', `got ${weak.status}`);
+
+    const gone = await call(aliceCookie, '/api/session/manage', {
+      action: 'delete',
+      sessionId: doomed.id,
+      confirm: 'DELETE',
+    });
+    gone.ok ? ok('delete works', '200') : bad('delete', String(gone.status));
+
+    const check = await doomed.get();
+    !check.exists ? ok('entry removed') : bad('delete', 'document still present');
+
+    // The classic Firestore bug: deleting a document leaves its subcollections
+    // orphaned in the database, present and unreachable.
+    const orphans = await doomed.collection('messages').get();
+    orphans.empty
+      ? ok('messages removed too', 'no orphaned subcollection')
+      : bad('orphans', `${orphans.size} message(s) left behind`);
+  }
+
   // ── Data rights ──────────────────────────────────────────────────────────
   section('Data rights');
   const exp = await fetch(`${BASE}/api/account/export`, { headers: { Cookie: aliceCookie } });

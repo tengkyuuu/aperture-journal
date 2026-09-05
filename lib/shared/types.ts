@@ -79,11 +79,32 @@ export interface VaultInfo {
   check: string;
 }
 
+/** Preferences. `theme` stays per-device in localStorage, deliberately. */
+export interface UserSettings {
+  defaultMode: import('../config').ConversationMode;
+  reduceMotion: boolean;
+}
+
 export interface UserProfile {
   displayName: string | null;
   email: string | null;
   photoURL: string | null;
   vault: VaultInfo | null;
+  settings: UserSettings;
+}
+
+/** Everything the profile page counts, derived from the user's own data. */
+export interface ProfileStats {
+  totalSessions: number;
+  closedSessions: number;
+  sealedSessions: number;
+  openSessions: number;
+  streak: number;
+  firstEntry: string | null;
+  themes: { name: string; count: number }[];
+  aiCalls: number;
+  totalTokens: number;
+  estCostUsd: number;
 }
 
 /** One row of the Privacy Ledger, as rendered on the Security page. */

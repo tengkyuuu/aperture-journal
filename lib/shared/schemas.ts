@@ -124,3 +124,31 @@ export const InsightsSchema = z.strictObject({
     .default([]),
   suggestedExperiment: z.string().max(500).default(''),
 });
+
+/**
+ * User preferences.
+ *
+ * The data model has documented a `settings` object since Day 1 and nothing
+ * ever wrote one — the schema promised something the app did not do. This is
+ * the route that makes it true.
+ *
+ * `theme` is deliberately absent: it stays per-device in localStorage. Wanting
+ * dark on a laptop at night and light on a phone outdoors is normal, and
+ * syncing it would be worse, not better.
+ */
+export const SettingsSchema = z.strictObject({
+  defaultMode: ModeSchema.optional(),
+  /** Force reduced motion even when the OS does not ask for it. */
+  reduceMotion: z.boolean().optional(),
+});
+
+export const RenameSessionSchema = z.strictObject({
+  sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  title: z.string().trim().min(1).max(120),
+});
+
+export const DeleteSessionSchema = z.strictObject({
+  sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  /** Typed by hand. Deleting an entry is not something to do by mis-click. */
+  confirm: z.literal('DELETE'),
+});

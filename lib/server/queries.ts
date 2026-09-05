@@ -9,6 +9,7 @@ import type {
   Insights,
   Mood,
   SecurityEvent,
+  ProfileStats,
   SessionSummary,
   StoredMessage,
   UserProfile,
@@ -57,6 +58,10 @@ export async function getProfile(uid: string): Promise<UserProfile> {
     email: (snap.get('email') as string | null) ?? null,
     photoURL: (snap.get('photoURL') as string | null) ?? null,
     vault: vault?.salt && vault?.check ? { salt: vault.salt, check: vault.check } : null,
+    settings: {
+      defaultMode: (snap.get('settings.defaultMode') as ConversationMode) ?? 'reflect',
+      reduceMotion: snap.get('settings.reduceMotion') === true,
+    },
   };
 }
 
@@ -241,5 +246,69 @@ export async function getHomeDigest(uid: string): Promise<HomeDigest> {
     weekMood,
     streak,
     totalSessions: all.length,
+  };
+}
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+
+/** Consecutive days ending today (or yesterday — today may not have happened). */
+function streakFrom(dates: (string | null)[]): number {
+  const days = new Set(
+    dates.filter((d): d is string => d !== null).map((d) => new Date(d).toDateString()),
+  );
+  let streak = 0;
+  const cursor = new Date();
+  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  while (days.has(cursor.toDateString())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+/**
+ * Everything the profile page counts.
+ *
+ * SECURITY PRECONDITION: `uid` comes from requireUid().
+ *
+ * Counted from the user's own documents rather than kept as running totals on
+ * the profile, because a denormalised counter drifts the moment anything is
+ * deleted — and entries can now be deleted one at a time.
+ */
+export async function getProfileStats(uid: string): Promise<ProfileStats> {
+  const [sessionsSnap, callsSnap] = await Promise.all([
+    sessionsCol(uid).orderBy('startedAt', 'asc').limit(1000).get(),
+    aiCallsCol(uid).limit(1000).get(),
+  ]);
+
+  const sessions = sessionsSnap.docs.map((d) => ({
+    startedAt: iso(d.get('startedAt')),
+    sealed: d.get('sealed') === true,
+    status: d.get('status') as string | undefined,
+    themes: ((d.get('insights') as Insights | undefined)?.themes ?? []) as string[],
+  }));
+
+  const counts = new Map<string, number>();
+  for (const s of sessions) {
+    for (const t of s.themes) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+
+  return {
+    totalSessions: sessions.length,
+    closedSessions: sessions.filter((s) => s.status === 'closed' && !s.sealed).length,
+    sealedSessions: sessions.filter((s) => s.sealed).length,
+    openSessions: sessions.filter((s) => s.status !== 'closed').length,
+    streak: streakFrom(sessions.map((s) => s.startedAt)),
+    firstEntry: sessions[0]?.startedAt ?? null,
+    themes: [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12),
+    aiCalls: callsSnap.size,
+    totalTokens: callsSnap.docs.reduce(
+      (n, d) => n + ((d.get('inputTokens') as number) ?? 0) + ((d.get('outputTokens') as number) ?? 0),
+      0,
+    ),
+    estCostUsd: callsSnap.docs.reduce((n, d) => n + ((d.get('estCostUsd') as number) ?? 0), 0),
   };
 }

@@ -98,6 +98,7 @@ pass. See [08 · Submission Map](docs/08-SUBMISSION.md) for requirement-to-line 
 | Privacy Ledger | Append-only record of every model call, plus real export and delete |
 | Emotional Weather | Mood ribbon and theme constellation from structured output |
 | Ask Your Past | Cited retrieval over your own summaries |
+| Profile | Real stats from your own data, working preferences, and per-entry delete |
 | Hardening | Nonce-based CSP, error boundaries, App Check wired, history secret-scan |
 
 Verified locally, with no model call required: **40 tests green**, clean build, lint and

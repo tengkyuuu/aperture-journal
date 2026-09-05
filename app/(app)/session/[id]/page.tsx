@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { Canvas } from '@/components/journal/canvas';
+import { SessionActions } from '@/components/journal/session-actions';
 import { getSession } from '@/lib/server/auth';
 import { getSessionDetail } from '@/lib/server/queries';
 import { CLEAR_SESSION_PATH, MODE_LABELS } from '@/lib/config';
@@ -61,6 +62,8 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         sealed={meta.sealed}
         placeholder="Pick the thread back up…"
       />
+
+      <SessionActions sessionId={meta.id} title={meta.title} sealed={meta.sealed} />
     </div>
   );
 }

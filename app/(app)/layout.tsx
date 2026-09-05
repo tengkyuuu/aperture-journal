@@ -38,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           email: profile.email ?? session.email ?? null,
           photoURL: profile.photoURL ?? null,
           vault: profile.vault,
+          settings: profile.settings,
         }}
         sessions={sessions}
       >

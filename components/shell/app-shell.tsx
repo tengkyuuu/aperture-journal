@@ -43,6 +43,20 @@ export function AppShell({
     setSheetOpen(false);
   }, [pathname]);
 
+  /**
+   * The "always reduce motion" preference, applied to the root element.
+   *
+   * The OS setting is already honoured by a media query in globals.css. This is
+   * the override for people whose system does not expose one, or who want it in
+   * this app only — a real gap, since the OS toggle is buried on several
+   * platforms and absent on some.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    if (user.settings.reduceMotion) root.dataset.reduceMotion = '1';
+    else delete root.dataset.reduceMotion;
+  }, [user.settings.reduceMotion]);
+
   useEffect(() => {
     if (!sheetOpen) return;
     function onKey(e: KeyboardEvent) {
@@ -143,12 +157,19 @@ export function AppShell({
           {children}
         </main>
 
-        {/* Bottom tab bar below md, where there is no rail. */}
+        {/*
+          Bottom tab bar below md, where there is no rail.
+
+          Capped at FIVE. Six targets on a phone bottom bar puts each one under
+          the 44px minimum on a small screen, and the nav-limit rule exists for
+          exactly that reason. Profile is the one that drops — it is reachable
+          from the sheet, and it is not somewhere you go mid-thought.
+        */}
         <nav
           aria-label="Main"
           className="fixed inset-x-0 bottom-0 z-10 flex border-t-[3px] border-line bg-surface/95 backdrop-blur-sm md:hidden"
         >
-          {NAV.map(({ href, label, Icon }) => {
+          {NAV.slice(0, 5).map(({ href, label, Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Link
@@ -192,7 +213,13 @@ export function AppShell({
             <div className="min-h-0 flex-1">
               <Timeline sessions={sessions} onNavigate={() => setSheetOpen(false)} />
             </div>
-            <div className="border-t-[3px] border-line p-3">
+            <div className="flex flex-col gap-1 border-t-[3px] border-line p-3">
+              <Link
+                href="/profile"
+                className="rounded-control px-3 py-2 text-[13px] font-bold uppercase tracking-wide text-ink-2 hover:bg-sunken hover:text-ink"
+              >
+                Profile
+              </Link>
               <button
                 type="button"
                 onClick={handleSignOut}

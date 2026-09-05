@@ -110,3 +110,12 @@ export function IconSend({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconProfile({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="10" cy="7" r="3.4" />
+      <path d="M3.8 17.2a6.6 6.6 0 0 1 12.4 0" />
+    </svg>
+  );
+}

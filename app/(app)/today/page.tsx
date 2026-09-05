@@ -7,7 +7,7 @@ import { WeekStrip } from '@/components/home/week-strip';
 import { MoodTint } from '@/components/shell/mood-tint';
 import { getSession } from '@/lib/server/auth';
 import { CLEAR_SESSION_PATH } from '@/lib/config';
-import { getHomeDigest } from '@/lib/server/queries';
+import { getHomeDigest, getProfile } from '@/lib/server/queries';
 import { longDate } from '@/lib/shared/format';
 
 export const dynamic = 'force-dynamic';
@@ -47,7 +47,10 @@ export default async function TodayPage() {
   const session = await getSession();
   if (!session) redirect(CLEAR_SESSION_PATH);
 
-  const digest = await getHomeDigest(session.uid);
+  const [digest, profile] = await Promise.all([
+    getHomeDigest(session.uid),
+    getProfile(session.uid),
+  ]);
   const firstName = (session.name as string | undefined)?.split(' ')[0];
   const isNew = digest.totalSessions === 0;
 
@@ -74,7 +77,8 @@ export default async function TodayPage() {
         ) : null}
       </header>
 
-      <Canvas placeholder={promptForToday()} />
+      {/* The saved default mode, finally doing something. */}
+      <Canvas placeholder={promptForToday()} initialMode={profile.settings.defaultMode} />
 
       {!isNew ? (
         <div className="mt-16 flex flex-col gap-12 border-t-[3px] border-line pt-12">

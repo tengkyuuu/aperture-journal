@@ -488,6 +488,29 @@
   }
 }
 
+/*
+ * The in-app "always reduce motion" preference.
+ *
+ * Same rules as the OS media query below. It exists because the OS toggle is
+ * buried on several platforms and missing on some, and a person who needs it
+ * should not have to go hunting through system settings to use this app.
+ */
+:root[data-reduce-motion="1"] *,
+:root[data-reduce-motion="1"] *::before,
+:root[data-reduce-motion="1"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+:root[data-reduce-motion="1"] .brut-press:hover,
+:root[data-reduce-motion="1"] .brut-press:active,
+:root[data-reduce-motion="1"] .brut-press-sm:hover,
+:root[data-reduce-motion="1"] .brut-press-sm:active,
+:root[data-reduce-motion="1"] .tilt-l,
+:root[data-reduce-motion="1"] .tilt-r {
+  transform: none;
+}
+
 /* Reduced motion: no travel, no overshoot. Hover and press still change the
    shadow, so the interface stays legible without moving. */
 @media (prefers-reduced-motion: reduce) {
