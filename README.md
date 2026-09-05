@@ -39,6 +39,7 @@
 | [06 · Sprint Runbook](docs/06-SPRINT-RUNBOOK.md) | Hour-by-hour 4-day plan with hard gates, demo script, and submission checklist. |
 | [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md) | What has been verified per gate, what is outstanding, and the deliberate deviations. |
 | [08 · Submission Map](docs/08-SUBMISSION.md) | **Every requirement mapped to file:line**, the demo script, and the honestly stated limitations. |
+| [10 · Roadmap — Echoes](docs/10-ECHOES-AND-PLATFORM.md) | The headline feature that would make this unforgettable, the full web-platform layer, and what I would deliberately not build. |
 | [09 · Design — Paper Cut](docs/09-DESIGN-PAPER-CUT.md) | **Current design system.** Neo-brutalism with pixels: rules, palette, primitives, and where the pixels actually earn their place. |
 
 ---
