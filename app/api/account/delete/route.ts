@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { requireSession, sessionCookieOptions } from '@/lib/server/auth';
 import { userDoc } from '@/lib/server/db';
 import { adminAuth } from '@/lib/server/firebase-admin';
-import { assertSameOrigin, parseBody, toErrorResponse } from '@/lib/server/http';
+import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { log, uidTag } from '@/lib/server/logger';
 import { SESSION_COOKIE_NAME } from '@/lib/config';
 
@@ -30,7 +30,7 @@ const DeleteSchema = z.strictObject({
  */
 export async function POST(req: Request) {
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const session = await requireSession();
     const uid = session.uid;
 

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { Inter, JetBrains_Mono, Newsreader } from 'next/font/google';
 
 import './globals.css';
@@ -56,7 +57,12 @@ try {
 } catch (e) {}
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Set by middleware. The bootstrap script below is inline, so without this
+  // nonce our own Content-Security-Policy would block it — which is precisely
+  // what we want to happen to any inline script we did not put there.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html
       lang="en"
@@ -64,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${newsreader.variable} ${inter.variable} ${jetbrains.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body className="min-h-dvh bg-canvas text-ink antialiased">{children}</body>
     </html>

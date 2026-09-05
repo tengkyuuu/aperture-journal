@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
 import { requireUid } from '@/lib/server/auth';
-import { assertSameOrigin, parseBody, toErrorResponse } from '@/lib/server/http';
+import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { assertSafeId, messagesCol, sessionDoc, sessionsCol } from '@/lib/server/db';
 import { estimateTokens, streamChat, toContents } from '@/lib/server/gemini';
 import { scanForInjection } from '@/lib/server/injection';
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   const startedAt = Date.now();
 
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const uid = await requireUid();
     const body = await parseBody(req, ChatRequestSchema);
 

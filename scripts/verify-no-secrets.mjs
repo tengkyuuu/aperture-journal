@@ -13,6 +13,7 @@
  */
 
 import { readdir, readFile, stat } from 'node:fs/promises';
+import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -91,3 +92,46 @@ if (hits > 0) {
 
 console.log(`✓ Clean. Scanned ${scanned} bundle files under ${ROOT}.`);
 console.log('  No API keys, private keys, or Secret Manager references in client output.');
+
+// ── Git history ─────────────────────────────────────────────────────────────
+//
+// Run with --history to also scan every commit. A key that was committed once
+// and removed later is still in the history, and still leaked — deleting the
+// line from the working tree fixes nothing.
+//
+// The Firebase web API key is expected here too: it is public config and lives
+// in apphosting.yaml on purpose. Any OTHER key-shaped string fails.
+
+if (process.argv.includes('--history')) {
+  console.log('');
+  let diff = '';
+  try {
+    diff = execSync('git log -p --all', { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  } catch {
+    console.error('✗ Could not read git history.');
+    process.exit(1);
+  }
+
+  const found = new Map();
+  for (const { name, re } of PATTERNS) {
+    if (name === 'Secret Manager client') continue; // legitimately in server source
+    const global = new RegExp(re.source, 'g');
+    for (const m of diff.matchAll(global)) {
+      if (PUBLIC_KEY && m[0] === PUBLIC_KEY) continue;
+      found.set(m[0], name);
+    }
+  }
+
+  if (found.size > 0) {
+    for (const [value, name] of found) {
+      console.error(`✗ ${name} in git history: ${value.slice(0, 12)}… (truncated)`);
+    }
+    console.error(`
+✗ FAILED — ${found.size} secret(s) present in commit history.`);
+    process.exitCode = 1;
+  } else {
+    const commits = execSync('git rev-list --all --count', { encoding: 'utf8' }).trim();
+    console.log(`✓ Git history clean across ${commits} commits.`);
+    console.log('  The only key-shaped string is the public Firebase web config value.');
+  }
+}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { decrypt, encrypt } from '@/lib/client/vault';
+import { apiPost } from '@/lib/client/api';
 import type { ConversationMode } from '@/lib/config';
 import type { Insights, StoredMessage } from '@/lib/shared/types';
 import { useVault } from '@/components/vault/vault-provider';
@@ -131,10 +132,10 @@ export function Canvas({
     ]);
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, mode, sessionId: sessionId.current }),
+      const res = await apiPost('/api/chat', {
+        message,
+        mode,
+        sessionId: sessionId.current,
       });
 
       if (!res.ok || !res.body) {
@@ -189,10 +190,8 @@ export function Canvas({
     const startedAt = Date.now();
 
     try {
-      const res = await fetch('/api/session/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionId.current }),
+      const res = await apiPost('/api/session/summarize', {
+        sessionId: sessionId.current,
       });
 
       const elapsed = Date.now() - startedAt;
@@ -241,11 +240,7 @@ export function Canvas({
       }
 
       const [res] = await Promise.all([
-        fetch('/api/session/seal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: id, messages: payload }),
-        }),
+        apiPost('/api/session/seal', { sessionId: id, messages: payload }),
         // Let the animation play out rather than snapping.
         sleep(SEAL_ANIM_MS),
       ]);

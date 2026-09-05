@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { requireUid } from '@/lib/server/auth';
 import { userDoc } from '@/lib/server/db';
-import { assertSameOrigin, BadRequest, parseBody, toErrorResponse } from '@/lib/server/http';
+import { assertRequestIntegrity, BadRequest, parseBody, toErrorResponse } from '@/lib/server/http';
 import { log, uidTag } from '@/lib/server/logger';
 import { VaultInitSchema } from '@/lib/shared/schemas';
 
@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const uid = await requireUid();
     const { salt, check } = await parseBody(req, VaultInitSchema);
 

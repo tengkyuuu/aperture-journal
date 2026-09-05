@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireUid } from '@/lib/server/auth';
 import { embed, estimateTokens, streamGroundedAnswer } from '@/lib/server/gemini';
-import { assertSameOrigin, parseBody, toErrorResponse } from '@/lib/server/http';
+import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { scanForInjection } from '@/lib/server/injection';
 import { recordAiCall, recordSecurityEvent } from '@/lib/server/ledger';
 import { log, uidTag } from '@/lib/server/logger';
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const startedAt = Date.now();
 
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const uid = await requireUid();
     const { question } = await parseBody(req, AskRequestSchema);
 

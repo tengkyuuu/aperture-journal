@@ -9,7 +9,7 @@ import {
   Unauthenticated,
 } from '@/lib/server/auth';
 import { userDoc } from '@/lib/server/db';
-import { assertSameOrigin, parseBody, toErrorResponse } from '@/lib/server/http';
+import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { log, uidTag } from '@/lib/server/logger';
 import { SessionRequestSchema } from '@/lib/shared/schemas';
 import { SESSION_COOKIE_NAME } from '@/lib/config';
@@ -27,7 +27,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(req: Request) {
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const { idToken } = await parseBody(req, SessionRequestSchema);
 
     // Verifies signature, expiry, audience, revocation, and sign-in freshness.
@@ -49,9 +49,9 @@ export async function POST(req: Request) {
  * Called once after sign-in. Separate from POST because it requires the cookie
  * that POST has only just set.
  */
-export async function PUT() {
+export async function PUT(req: Request) {
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const session = await getSession();
     if (!session) throw new Unauthenticated();
 
@@ -81,9 +81,9 @@ export async function PUT() {
  * holding a copy of the cookie cannot keep using it. Clearing the cookie alone
  * would only sign out the honest browser.
  */
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const session = await getSession();
     if (session) {
       await revokeSession(session.uid);

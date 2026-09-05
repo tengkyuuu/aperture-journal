@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { requireUid } from '@/lib/server/auth';
 import { assertSafeId, messagesCol, sessionDoc } from '@/lib/server/db';
 import { embed, estimateTokens, summarizeSession } from '@/lib/server/gemini';
-import { assertSameOrigin, BadRequest, parseBody, toErrorResponse } from '@/lib/server/http';
+import { assertRequestIntegrity, BadRequest, parseBody, toErrorResponse } from '@/lib/server/http';
 import { recordAiCall } from '@/lib/server/ledger';
 import { log, uidTag } from '@/lib/server/logger';
 import { consumeQuota, settleQuota } from '@/lib/server/ratelimit';
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const startedAt = Date.now();
 
   try {
-    await assertSameOrigin();
+    await assertRequestIntegrity(req);
     const uid = await requireUid();
     const { sessionId: rawId } = await parseBody(req, SummarizeRequestSchema);
     const sessionId = assertSafeId(rawId);

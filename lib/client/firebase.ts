@@ -11,6 +11,8 @@ import {
   type Auth,
 } from 'firebase/auth';
 
+import { apiFetch, apiPost } from './api';
+
 /**
  * Client-side Firebase — used for exactly one thing: running the Google
  * sign-in popup to obtain an ID token, which is immediately exchanged for an
@@ -57,22 +59,18 @@ export async function signInWithGoogle(): Promise<void> {
   const credential = await signInWithPopup(auth, provider);
   const idToken = await credential.user.getIdToken();
 
-  const res = await fetch('/api/auth/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  });
+  const res = await apiPost('/api/auth/session', { idToken });
   if (!res.ok) throw new Error('session_exchange_failed');
 
   // Create/refresh the profile document server-side now that the cookie exists.
-  await fetch('/api/auth/session', { method: 'PUT' });
+  await apiFetch('/api/auth/session', { method: 'PUT' });
 
   // The cookie is the credential from here on. Nothing left in the tab.
   await signOut(auth);
 }
 
 export async function signOutEverywhere(): Promise<void> {
-  await fetch('/api/auth/session', { method: 'DELETE' });
+  await apiFetch('/api/auth/session', { method: 'DELETE' });
   try {
     await signOut(clientAuth());
   } catch {

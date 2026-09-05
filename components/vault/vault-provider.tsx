@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { deriveKey, makeCheck, newSalt, verifyCheck } from '@/lib/client/vault';
+import { apiPost } from '@/lib/client/api';
 
 /**
  * Holds the vault key in memory and nowhere else.
@@ -92,11 +93,7 @@ export function VaultProvider({
 
     // The salt and the check blob are not secret. The salt exists to stop
     // precomputed-table attacks; the check blob only proves a key is correct.
-    const res = await fetch('/api/vault/init', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ salt: s, check: c }),
-    });
+    const res = await apiPost('/api/vault/init', { salt: s, check: c });
     if (!res.ok) return false;
 
     setState({ status: 'unlocked', key });

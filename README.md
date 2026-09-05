@@ -38,6 +38,7 @@
 | [05 · UI/UX Spec](docs/05-UI-UX-SPEC.md) | "Quiet Ink" design system, tokens, eight screens, three signature moments, accessibility contract. |
 | [06 · Sprint Runbook](docs/06-SPRINT-RUNBOOK.md) | Hour-by-hour 4-day plan with hard gates, demo script, and submission checklist. |
 | [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md) | What has been verified per gate, what is outstanding, and the deliberate deviations. |
+| [08 · Submission Map](docs/08-SUBMISSION.md) | **Every requirement mapped to file:line**, the demo script, and the honestly stated limitations. |
 
 ---
 
@@ -74,12 +75,13 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | `npm run test:rules` | 26 isolation tests against the Firestore emulator (needs Java) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run verify:cloud` | Read-only check of the whole Google Cloud setup |
-| `npm run verify:no-secrets` | Greps the built client bundle for keys — run after `npm run build` |
+| `npm run verify:no-secrets` | Scans the built bundle for keys; add `-- --history` to scan every commit |
 | `npm run emulators` | Firestore + Auth emulators for local development |
 
 ## Status
 
-**Days 1-3 complete.** All four core requirements and all four enhancements are implemented.
+**Days 1-4 complete.** All four core requirements, all four enhancements, and the hardening
+pass. See [08 · Submission Map](docs/08-SUBMISSION.md) for requirement-to-line mapping.
 
 | | |
 |---|---|
@@ -88,12 +90,14 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | Isolated storage | Path-scoped tenancy, deny-by-default rules, 26 passing isolation tests |
 | Secret management | Runtime Secret Manager retrieval behind a `server-only` build guard |
 | Zero-Knowledge Vault | Client-side AES-256-GCM, 14 passing crypto tests |
-| Privacy Ledger | Append-only per-user record of every model call, plus export and delete |
+| Privacy Ledger | Append-only record of every model call, plus real export and delete |
 | Emotional Weather | Mood ribbon and theme constellation from structured output |
 | Ask Your Past | Cited retrieval over your own summaries |
+| Hardening | Nonce-based CSP, error boundaries, App Check wired, history secret-scan |
 
-Verified locally without a single model call: 40 tests green, clean build and lint, route
-protection, CSRF rejection, forged-cookie rejection, and no secrets in the client bundle.
+Verified locally, with no model call required: **40 tests green**, clean build, lint and
+typecheck, route protection, CSRF rejection, forged-cookie rejection, no secrets in the bundle
+or in git history.
 
-Still needed: billing on the Google Cloud project, so the Gemini key can be added to Secret
-Manager and the live path exercised. See [07 - Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
+Two Console toggles remain before a live run — the Google sign-in provider and the Gemini API
+key. Both are listed in [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).

@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ZodError, type ZodType } from 'zod';
 
+import { assertAppCheck, FailedAttestation } from './appcheck';
 import { Unauthenticated } from './auth';
 import { log } from './logger';
 
@@ -56,6 +57,18 @@ export async function assertSameOrigin(): Promise<void> {
   }
 }
 
+/**
+ * The single entry guard for a mutating route: same-origin, then attestation.
+ *
+ * Order matters. The origin check is free and local; App Check verification is
+ * a network round trip. Rejecting an obviously cross-origin request before
+ * paying for attestation is both faster and less abusable.
+ */
+export async function assertRequestIntegrity(req: Request): Promise<void> {
+  await assertSameOrigin();
+  await assertAppCheck(req);
+}
+
 /** Parse a JSON body against a strict schema. Never echoes the body back. */
 export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T> {
   let raw: unknown;
@@ -87,6 +100,10 @@ export function toErrorResponse(err: unknown, route: string): NextResponse {
   }
   if (err instanceof BadRequest) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  }
+  if (err instanceof FailedAttestation) {
+    // 403, not 401: the credential may well be valid — the client is not.
+    return NextResponse.json({ error: 'failed_attestation' }, { status: 403 });
   }
 
   // Unexpected. Log the shape, never the payload, and tell the client nothing.

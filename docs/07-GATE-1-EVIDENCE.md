@@ -327,3 +327,114 @@ Everything above is verified without a single Gemini call. What is not:
 - [ ] The ledger populating with real token counts and costs
 - [ ] The weather ribbon and constellation with real distilled sessions
 - [ ] A cited answer from Ask Your Past
+
+---
+
+# Gate 4 — Hardening & Ship
+
+## Gate 4 — verified ✅
+
+### 1. Nonce-based CSP — the documented gap is closed
+
+`script-src` no longer carries `'unsafe-inline'`. A per-request nonce is minted in middleware,
+placed on the request headers so Next.js stamps its own bootstrap scripts, and on the response
+header so the browser enforces it.
+
+Verified against the running server:
+
+| Check | Result |
+|---|---|
+| CSP headers on the response | exactly **1** (two would be silently intersected) |
+| `<script>` tags carrying a nonce | **23**, all one distinct value |
+| That value matches the header nonce | **yes** |
+| `'unsafe-inline'` in `script-src` | **gone** |
+| Inline theme bootstrap nonced | yes |
+| Two requests, two different nonces | yes |
+
+**Deliberately no `strict-dynamic`.** It is stronger, but it makes the browser ignore the host
+allowlist, leaving the Firebase Auth popup entirely dependent on trust propagating through the
+SDK's dynamically-created script tags. That should work — and it is not something to discover
+on demo day with a live sign-in flow that has never been exercised. Explicit hosts plus a nonce
+closes the actual gap with far less to go wrong. Revisit after the popup has run end to end.
+
+**`style-src` still allows `'unsafe-inline'`.** React writes inline style attributes throughout
+and a style attribute cannot carry a nonce. Accepted: CSS injection needs an existing
+HTML-injection hole, and this app renders no untrusted HTML anywhere — no
+`dangerouslySetInnerHTML` outside the nonced bootstrap, no markdown renderer, no user
+templates.
+
+CSP moved out of `next.config.ts` entirely. Two CSP headers on one response are intersected by
+the browser, producing a policy nobody wrote and failures nobody can explain.
+
+### 2. Every state has a surface
+
+`app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`, `app/(app)/loading.tsx`.
+
+The 404 copy is deliberate: *"Either it never existed, or it is not yours to read."* A missing
+session and someone else's session are indistinguishable from outside. Anything more specific
+would confirm that an id exists.
+
+`global-error.tsx` uses literal colours rather than tokens — it renders when the root layout
+itself has failed, so the design system may not have loaded.
+
+### 3. App Check wired, enforcement opt-in
+
+Verification runs on every mutating route through `assertRequestIntegrity()`. Until
+`APPCHECK_ENFORCE=1`, a failure is logged and allowed.
+
+That default is the point: App Check needs a reCAPTCHA Enterprise site key that only the
+Console can mint. Shipping it enforcing-by-default with no key configured would lock every user
+out — a worse failure than the one it prevents. Observation mode also lets you see what
+enforcement *would* have done before turning it on.
+
+All client calls now go through `apiFetch()` in [`lib/client/api.ts`](../lib/client/api.ts),
+so the attestation header is set in one place. Verified no raw `fetch('/api…')` remains
+anywhere in the tree — a security header nobody has to remember is a security header that
+stays set.
+
+### 4. Git history is clean, and that is now checkable
+
+`npm run verify:no-secrets -- --history` scans every commit, not just the working tree. A key
+committed once and deleted later is still leaked; removing the line fixes nothing.
+
+```
+✓ Clean. Scanned 34 bundle files under .next/static.
+✓ Git history clean across 5 commits.
+  The only key-shaped string is the public Firebase web config value.
+```
+
+**On committing the Firebase web API key:** it is public by design, ships in the bundle on
+every request, and identifies the project rather than authorising anything. What protects the
+data is Firestore rules, referrer restrictions and App Check. Hiding it would be theatre — and
+theatre is worse than nothing, because it teaches the next person that it is a secret. The
+scanner allows exactly that one value and fails on any other, which makes the claim checkable
+rather than asserted.
+
+### 5. Full suite green
+
+```
+$ npm test
+ Tests  14 passed (14)     # vault crypto
+ Tests  26 passed (26)     # cross-user isolation
+
+$ npx tsc --noEmit         # clean
+$ npx next lint            # No ESLint warnings or errors
+```
+
+---
+
+## Still outstanding — two Console toggles
+
+Neither is billing-related; both were always manual.
+
+1. **Google sign-in provider.** The Identity Toolkit API returns `client_id cannot be empty` —
+   only the Console auto-provisions that OAuth client.
+   → https://console.firebase.google.com/project/aperture-journal/authentication/providers
+
+2. **The Gemini API key.** Get one at https://aistudio.google.com/apikey, then:
+   ```
+   gcloud secrets versions add GEMINI_API_KEY --data-file=- --project=aperture-journal
+   ```
+   Paste, then Ctrl+Z and Enter on Windows. This keeps the key out of shell history.
+
+`npm run verify:cloud` goes 24/24 once both are done.

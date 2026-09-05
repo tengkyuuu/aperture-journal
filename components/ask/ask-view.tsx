@@ -4,6 +4,7 @@ import { Fragment, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import { IconAsk } from '@/components/shell/icons';
+import { apiPost } from '@/lib/client/api';
 
 interface Citation {
   id: string;
@@ -47,11 +48,7 @@ export function AskView() {
     setAsked(text);
 
     try {
-      const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text }),
-      });
+      const res = await apiPost('/api/ask', { question: text });
 
       if (!res.ok || !res.body) {
         if (res.status === 422) {

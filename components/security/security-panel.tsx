@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { relativeTime } from '@/lib/shared/format';
 import type { AiCall, SecurityEvent } from '@/lib/shared/types';
+import { apiPost } from '@/lib/client/api';
 
 /**
  * The Security page.
@@ -56,11 +57,7 @@ export function SecurityPanel({
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch('/api/account/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm }),
-      });
+      const res = await apiPost('/api/account/delete', { confirm });
       if (!res.ok) {
         setError('Deletion did not complete. Nothing was removed.');
         setDeleting(false);

@@ -1,14 +1,25 @@
 # Firebase App Hosting runtime configuration.
 #
-# NOTE WHAT IS ABSENT: GEMINI_API_KEY.
+# ══ NOTE WHAT IS ABSENT: GEMINI_API_KEY ══
 #
 # App Hosting can inject Secret Manager values as environment variables here,
-# and for most apps that is the right call. We deliberately do not, for two
-# reasons: fetching the key through the Secret Manager client at runtime makes
-# the dependency explicit and auditable, and a key rotation then takes effect
-# within one cache TTL instead of requiring a redeploy.
+# and for most apps that is the right call. We deliberately do not. Fetching
+# the key through the Secret Manager client at runtime makes the dependency
+# explicit and auditable, and a key rotation then takes effect within one cache
+# TTL instead of requiring a redeploy. See lib/server/secrets.ts.
 #
-# See lib/server/secrets.ts.
+# ══ WHY THE WEB API KEY IS COMMITTED ══
+#
+# NEXT_PUBLIC_FIREBASE_API_KEY is public by design. It ships inside the browser
+# bundle on every request, it identifies the project rather than authorising
+# anything, and Google documents it as public. What protects the data is
+# Firestore rules, referrer restrictions, and App Check — not the secrecy of
+# this string. Hiding it would be theatre, and theatre is worse than nothing
+# because it teaches the next person that it is a secret.
+#
+# `npm run verify:no-secrets -- --history` proves the point: it scans the git
+# history for key patterns and allows exactly this one value, failing on any
+# other.
 
 runConfig:
   minInstances: 0
@@ -19,7 +30,7 @@ runConfig:
 
 env:
   - variable: GOOGLE_CLOUD_PROJECT
-    value: CHANGE_ME_PROJECT_ID
+    value: aperture-journal
     availability:
       - RUNTIME
 
@@ -28,23 +39,28 @@ env:
     availability:
       - RUNTIME
 
-  # Public by design. These ship in the browser bundle, identify the project
-  # rather than authorise anything, and are protected by referrer restrictions,
-  # Firestore rules, and App Check. They are config, not credentials.
+  # App Check enforcement. Set to 1 only once NEXT_PUBLIC_APPCHECK_SITE_KEY is
+  # populated — enforcing without a site key locks every user out.
+  # See lib/server/appcheck.ts.
+  - variable: APPCHECK_ENFORCE
+    value: "0"
+    availability:
+      - RUNTIME
+
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: CHANGE_ME_WEB_API_KEY
+    value: AIzaSyCaW1cn3pw2LvsTpP7sMbyCQB6ij0xdZGY
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: CHANGE_ME_PROJECT_ID.firebaseapp.com
+    value: aperture-journal.firebaseapp.com
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: CHANGE_ME_PROJECT_ID
+    value: aperture-journal
     availability:
       - BUILD
       - RUNTIME
