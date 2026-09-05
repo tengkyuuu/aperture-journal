@@ -2,13 +2,14 @@ import { redirect } from 'next/navigation';
 
 import { VaultPanel } from '@/components/vault/vault-panel';
 import { getSession } from '@/lib/server/auth';
+import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { listSealedSessions } from '@/lib/server/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default async function VaultPage() {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   // Everything this query can return about a sealed session is metadata.
   // The content is ciphertext and stays that way until the browser decrypts it.

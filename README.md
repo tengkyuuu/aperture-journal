@@ -35,16 +35,17 @@
 | [02 · Architecture](docs/02-ARCHITECTURE.md) | Trust boundary, secret management, Gemini layer, STRIDE threat model, repo layout, stated tradeoffs. |
 | [03 · Data Model & Rules](docs/03-DATA-MODEL-AND-RULES.md) | Firestore schema, complete `firestore.rules`, and the cross-tenant isolation test suite. |
 | [04 · Features](docs/04-FEATURES.md) | Core requirements, the four enhancements, and the cut list. |
-| [05 · UI/UX Spec](docs/05-UI-UX-SPEC.md) | "Quiet Ink" design system, tokens, eight screens, three signature moments, accessibility contract. |
+| [05 · UI/UX Spec](docs/05-UI-UX-SPEC.md) | Superseded "Quiet Ink" system — kept for the layout, screen inventory and accessibility contract, which still hold. |
 | [06 · Sprint Runbook](docs/06-SPRINT-RUNBOOK.md) | Hour-by-hour 4-day plan with hard gates, demo script, and submission checklist. |
 | [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md) | What has been verified per gate, what is outstanding, and the deliberate deviations. |
 | [08 · Submission Map](docs/08-SUBMISSION.md) | **Every requirement mapped to file:line**, the demo script, and the honestly stated limitations. |
+| [09 · Design — Paper Cut](docs/09-DESIGN-PAPER-CUT.md) | **Current design system.** Neo-brutalism with pixels: rules, palette, primitives, and where the pixels actually earn their place. |
 
 ---
 
 ## Stack
 
-Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind v4 · shadcn/ui · Framer Motion
+Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind v4
 Firebase Auth · Cloud Firestore · Firebase App Hosting (Cloud Run)
 Google Cloud Secret Manager · Gemini via `@google/genai`
 
@@ -75,6 +76,7 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | `npm run test:rules` | 26 isolation tests against the Firestore emulator (needs Java) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run verify:cloud` | Read-only check of the whole Google Cloud setup |
+| `npm run verify:contrast` | WCAG AA check of both themes, read from the shipped tokens |
 | `npm run verify:gemini` | Secret Manager to Gemini: chat, structured output, embeddings |
 | `npm run test:e2e` | Two real users through the whole app, then a leak attempt |
 | `npm run verify:no-secrets` | Scans the built bundle for keys; add `-- --history` to scan every commit |

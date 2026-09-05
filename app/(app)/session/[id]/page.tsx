@@ -3,14 +3,14 @@ import { notFound, redirect } from 'next/navigation';
 import { Canvas } from '@/components/journal/canvas';
 import { getSession } from '@/lib/server/auth';
 import { getSessionDetail } from '@/lib/server/queries';
-import { MODE_LABELS } from '@/lib/config';
+import { CLEAR_SESSION_PATH, MODE_LABELS } from '@/lib/config';
 import { longDate, relativeTime } from '@/lib/shared/format';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   const { id } = await params;
 

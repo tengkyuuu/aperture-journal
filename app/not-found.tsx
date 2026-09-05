@@ -20,7 +20,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/today"
-          className="mt-8 inline-block rounded-control border border-line px-4 py-2 text-[13px] text-ink-2 hover:border-line-strong"
+          className="mt-8 inline-block rounded-control brut-thin px-4 py-2 text-[13px] text-ink-2 hover:border-line-strong"
         >
           Back to today
         </Link>

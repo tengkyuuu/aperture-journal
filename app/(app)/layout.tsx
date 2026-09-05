@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/shell/app-shell';
 import { VaultProvider } from '@/components/vault/vault-provider';
 import { getSession } from '@/lib/server/auth';
+import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { getProfile, listSessions } from '@/lib/server/queries';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   const uid = session.uid;
   const [profile, sessions] = await Promise.all([getProfile(uid), listSessions(uid)]);

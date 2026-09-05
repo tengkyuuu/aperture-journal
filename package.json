@@ -16,7 +16,8 @@
     "test": "vitest run tests/vault.test.ts && npm run test:rules",
     "verify:gemini": "node scripts/verify-gemini.mjs",
     "test:e2e": "node scripts/e2e.mjs",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "verify:contrast": "node scripts/verify-contrast.mjs"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^7.0.0",

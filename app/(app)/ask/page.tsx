@@ -2,12 +2,13 @@ import { redirect } from 'next/navigation';
 
 import { AskView } from '@/components/ask/ask-view';
 import { getSession } from '@/lib/server/auth';
+import { CLEAR_SESSION_PATH } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AskPage() {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   return (
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">

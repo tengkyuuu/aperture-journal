@@ -2,13 +2,14 @@ import { redirect } from 'next/navigation';
 
 import { SecurityPanel } from '@/components/security/security-panel';
 import { getSession } from '@/lib/server/auth';
+import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { listAiCalls, listSealedSessions, listSecurityEvents } from '@/lib/server/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SecurityPage() {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   const uid = session.uid;
   const [calls, events, sealed] = await Promise.all([

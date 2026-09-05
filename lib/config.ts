@@ -91,6 +91,15 @@ export const LIMITS = {
 
 export const SESSION_COOKIE_NAME = '__session';
 
+/**
+ * Where to send someone whose session cookie exists but does not verify.
+ *
+ * NOT '/sign-in' — middleware would see the still-present cookie and bounce
+ * them straight back, which is an infinite redirect. This route clears the
+ * cookie first. See app/api/auth/clear/route.ts.
+ */
+export const CLEAR_SESSION_PATH = '/api/auth/clear';
+
 export type ConversationMode = 'reflect' | 'brainstorm' | 'untangle' | 'duck';
 
 export const MODE_LABELS: Record<ConversationMode, string> = {

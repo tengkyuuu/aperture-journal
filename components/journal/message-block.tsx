@@ -45,7 +45,7 @@ export function MessageBlock({
         {sealed ? (
           <span
             aria-hidden
-            className="absolute -left-4 top-[0.9em] size-1.5 rounded-full bg-sealed"
+            className="absolute -left-5 top-[0.85em] size-2.5 border-2 border-line bg-sealed"
             title="Sealed — decrypted locally"
           />
         ) : null}
@@ -56,14 +56,10 @@ export function MessageBlock({
 
   return (
     <article className="relative pl-5">
-      <span
-        aria-hidden
-        className="absolute left-0 top-[0.85em] bottom-[0.5em] w-px bg-accent/25"
-      />
-      <span
-        aria-hidden
-        className="absolute -left-[2px] top-[0.78em] size-[5px] rounded-full bg-accent"
-      />
+      {/* A solid ink rule and a square marker. The old hairline-and-dot was
+          the previous system's whisper; this system does not whisper. */}
+      <span aria-hidden className="absolute left-0 top-[0.7em] bottom-[0.4em] w-[3px] bg-accent" />
+      <span aria-hidden className="absolute -left-[5px] top-[0.75em] size-[11px] border-[3px] border-line bg-accent" />
       <div className="prose-journal whitespace-pre-wrap text-ink-2">
         {streaming ? <RevealText text={content} /> : content}
         {streaming ? (
@@ -85,8 +81,8 @@ export function MessageBlock({
  */
 export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
   return (
-    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border border-dashed border-sealed/40 bg-sealed/[0.04] px-4 py-3">
-      <span className="size-1.5 shrink-0 rounded-full bg-sealed" aria-hidden />
+    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border-[3px] border-dashed border-sealed bg-sealed/10 px-4 py-3">
+      <span className="size-2.5 shrink-0 border-2 border-line bg-sealed" aria-hidden />
       <p className="text-[13px] text-ink-3">
         <span className="text-sealed">Sealed.</span> Only your passphrase opens this — not us,
         not Gemini.

@@ -80,7 +80,7 @@ export function Shortcuts() {
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
       }}
-      className="m-0 w-full max-w-sm rounded-sheet border border-line bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[14vh]"
+      className="m-0 w-full max-w-sm rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[14vh]"
     >
       <div className="flex flex-col gap-5 p-6">
         <p className="label">Keyboard</p>

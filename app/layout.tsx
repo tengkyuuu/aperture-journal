@@ -1,28 +1,33 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import { Inter, JetBrains_Mono, Newsreader } from 'next/font/google';
+import { JetBrains_Mono, Silkscreen, Space_Grotesk } from 'next/font/google';
 
 import './globals.css';
 
 /**
- * Type pairing, from docs/05-UI-UX-SPEC.md:
- *   Newsreader  — everything a human or the model *writes*
- *   Inter       — everything the product says *about* itself
- *   JetBrains   — the ledger, ids, and anything with digits in a column
- *
- * That split is the whole personality of the app: a notebook, not a chatbot.
+ * Type pairing, "Paper Cut":
+ *   Space Grotesk — everything. Display, UI, and the journal prose itself.
+ *                   Brutalism runs on one loud voice, not a conversation
+ *                   between two, so the old serif/sans split is gone.
+ *   Silkscreen    — an actual bitmap face for the 10px uppercase labels.
+ *                   At that size a pixel font is genuinely CRISPER than an
+ *                   antialiased one, so this is functional as well as
+ *                   thematic — the "pixels" earn their place.
+ *   JetBrains Mono — the ledger, where digits must line up in columns and
+ *                   Silkscreen has no tabular figures.
  */
 
-const newsreader = Newsreader({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  style: ['normal', 'italic'],
-  variable: '--font-newsreader',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-space-grotesk',
   display: 'swap',
 });
 
-const inter = Inter({
+const silkscreen = Silkscreen({
   subsets: ['latin'],
-  variable: '--font-inter',
+  weight: ['400', '700'],
+  variable: '--font-silkscreen',
   display: 'swap',
 });
 
@@ -40,8 +45,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf8f4' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b0b0c' },
+    { media: '(prefers-color-scheme: light)', color: '#fffcf2' },
+    { media: '(prefers-color-scheme: dark)', color: '#141414' },
   ],
 };
 
@@ -67,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${newsreader.variable} ${inter.variable} ${jetbrains.variable}`}
+      className={`${spaceGrotesk.variable} ${silkscreen.variable} ${jetbrains.variable}`}
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />

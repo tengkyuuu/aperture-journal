@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { MODE_LABELS, type ConversationMode } from '@/lib/config';
 
 import { IconSend } from '../shell/icons';
+import { PixelLoader } from '../shell/pixel-loader';
 
 const MODES: ConversationMode[] = ['reflect', 'brainstorm', 'untangle', 'duck'];
 
@@ -15,6 +16,15 @@ const MODE_HINTS: Record<ConversationMode, string> = {
   duck: 'Makes you explain it properly, then points at the gap.',
 };
 
+/**
+ * The composer.
+ *
+ * Every control here is a physical key: bordered, shadowed, and driven down by
+ * exactly the shadow offset when pressed. The mode tabs are the clearest case
+ * — the selected one sits FLUSH with the page, shadow gone, as though it were
+ * being held down. Selection is communicated by depth as well as by fill,
+ * which survives colour-blindness and a bad projector equally well.
+ */
 export function Composer({
   value,
   onChange,
@@ -61,39 +71,45 @@ export function Composer({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => onModeChange(m)}
-            aria-pressed={mode === m}
-            title={MODE_HINTS[m]}
-            className={`rounded-full px-3 py-1 text-[12px] transition-colors ${
-              mode === m
-                ? 'bg-accent-wash text-accent'
-                : 'text-ink-3 hover:bg-sunken hover:text-ink-2'
-            }`}
-          >
-            {MODE_LABELS[m]}
-          </button>
-        ))}
+      {/* ── Mode keys ──────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {MODES.map((m) => {
+          const on = mode === m;
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onModeChange(m)}
+              aria-pressed={on}
+              title={MODE_HINTS[m]}
+              className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-all duration-100 ${
+                on
+                  ? // Held down: flush with the page, shadow gone, filled.
+                    'translate-x-[3px] translate-y-[3px] bg-accent text-on-accent shadow-none'
+                  : 'brut-press-sm bg-surface text-ink shadow-[3px_3px_0_0_var(--border-ink)]'
+              }`}
+            >
+              {MODE_LABELS[m]}
+            </button>
+          );
+        })}
 
         {canEnd ? (
           <button
             type="button"
             onClick={onEnd}
-            className="ml-auto rounded-full border border-line px-3 py-1 text-[12px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+            className="brut-press-sm ml-auto rounded-control border-[3px] border-line bg-pop px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)]"
           >
             End session
-            <span className="ml-1.5 font-mono text-[10px] text-ink-3">⌘E</span>
+            <span className="ml-1.5 font-mono text-[10px] opacity-70">⌘E</span>
           </button>
         ) : null}
       </div>
 
-      <p className="text-[12px] leading-relaxed text-ink-3">{MODE_HINTS[mode]}</p>
+      <p className="text-[12.5px] leading-relaxed text-ink-3">{MODE_HINTS[mode]}</p>
 
-      <div className="flex items-end gap-2 rounded-card border border-line bg-surface p-2 transition-colors focus-within:border-line-strong">
+      {/* ── The page you write on ──────────────────────────────────────── */}
+      <div className="flex items-end gap-2 rounded-card brut bg-surface p-2 transition-shadow focus-within:shadow-[var(--shadow-brut-lg)]">
         <textarea
           ref={ref}
           value={value}
@@ -108,22 +124,34 @@ export function Composer({
           disabled={disabled}
           placeholder={placeholder ?? 'Write something…'}
           aria-label="Your entry"
-          className="prose-journal max-h-80 min-h-[3.5rem] w-full flex-1 resize-none bg-transparent px-3 py-2 text-[17px] outline-none placeholder:font-sans placeholder:text-[15px] placeholder:text-ink-3 disabled:opacity-50"
+          className="prose-journal max-h-80 min-h-[3.5rem] w-full flex-1 resize-none bg-transparent px-3 py-2 outline-none placeholder:text-[15px] placeholder:text-ink-3 disabled:opacity-50"
         />
         <button
           type="button"
           onClick={onSend}
           disabled={disabled || busy || !value.trim()}
           aria-label="Send"
-          className="mb-1 grid size-9 shrink-0 place-items-center rounded-control bg-accent text-on-accent transition-opacity disabled:opacity-25"
+          className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-accent text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] transition-all duration-100 disabled:pointer-events-none disabled:opacity-30"
         >
-          {busy ? <span className="animate-breathe size-1.5 rounded-full bg-current" /> : <IconSend />}
+          {busy ? <PixelLoader size="sm" tone="current" /> : <IconSend />}
         </button>
       </div>
 
-      <p className="text-[11px] text-ink-3">
-        <kbd className="font-mono">⌘↵</kbd> to send · <kbd className="font-mono">⌘K</kbd> to jump
+      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-ink-3">
+        <Key>⌘↵</Key> to send
+        <span aria-hidden>·</span>
+        <Key>⌘K</Key> to jump
+        <span aria-hidden>·</span>
+        <Key>?</Key> for keys
       </p>
     </div>
+  );
+}
+
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded border-2 border-line bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-ink-2">
+      {children}
+    </kbd>
   );
 }

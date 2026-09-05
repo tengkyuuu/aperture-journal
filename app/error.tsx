@@ -37,7 +37,7 @@ export default function ErrorBoundary({
           </button>
           <a
             href="/today"
-            className="rounded-control border border-line px-4 py-2 text-[13px] text-ink-2 hover:border-line-strong"
+            className="rounded-control brut-thin px-4 py-2 text-[13px] text-ink-2 hover:border-line-strong"
           >
             Back to today
           </a>

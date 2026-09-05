@@ -40,7 +40,7 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-card border border-line bg-surface">
+      <div className="overflow-hidden rounded-card brut bg-surface">
         <svg
           viewBox={`0 0 ${n} ${VIEW_H}`}
           preserveAspectRatio="none"

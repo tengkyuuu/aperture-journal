@@ -73,11 +73,11 @@ export function AppShell({
       </a>
 
       {/* ── Rail ─────────────────────────────────────────────────────────── */}
-      <aside className="sticky top-0 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r border-line bg-surface py-4 md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r-[3px] border-line bg-surface py-4 md:flex">
         <Link
           href="/today"
           aria-label="Aperture — home"
-          className="mb-3 grid size-9 place-items-center rounded-full border border-line-strong font-serif text-[15px] leading-none"
+          className="mb-3 grid size-9 place-items-center rounded-full border-2 border-line font-serif text-[15px] leading-none"
         >
           A
         </Link>
@@ -109,7 +109,7 @@ export function AppShell({
             onClick={handleSignOut}
             title={user.email ?? 'Sign out'}
             aria-label="Sign out"
-            className="grid size-9 place-items-center rounded-full border border-line text-[11px] font-medium text-ink-2 transition-colors hover:border-line-strong"
+            className="grid size-9 place-items-center rounded-full border-2 border-line text-[11px] font-medium text-ink-2 transition-colors hover:border-line-strong"
           >
             {initials(user.displayName, user.email)}
           </button>
@@ -117,13 +117,13 @@ export function AppShell({
       </aside>
 
       {/* ── Timeline (persistent at lg) ──────────────────────────────────── */}
-      <aside className="sticky top-0 hidden h-dvh w-[320px] shrink-0 border-r border-line bg-surface lg:block">
+      <aside className="sticky top-0 hidden h-dvh w-[320px] shrink-0 border-r-[3px] border-line bg-surface lg:block">
         <Timeline sessions={sessions} />
       </aside>
 
       {/* ── Canvas ───────────────────────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-canvas/85 px-4 py-2.5 backdrop-blur-sm lg:hidden">
+        <header className="sticky top-0 z-10 flex items-center gap-2 border-b-[3px] border-line bg-canvas/85 px-4 py-2.5 backdrop-blur-sm lg:hidden">
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
@@ -146,7 +146,7 @@ export function AppShell({
         {/* Bottom tab bar below md, where there is no rail. */}
         <nav
           aria-label="Main"
-          className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-surface/95 backdrop-blur-sm md:hidden"
+          className="fixed inset-x-0 bottom-0 z-10 flex border-t-[3px] border-line bg-surface/95 backdrop-blur-sm md:hidden"
         >
           {NAV.map(({ href, label, Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -177,8 +177,8 @@ export function AppShell({
             onClick={() => setSheetOpen(false)}
             className="absolute inset-0 bg-black/40 animate-fade-in"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[min(320px,85vw)] flex-col border-r border-line bg-surface animate-rise-in">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="absolute inset-y-0 left-0 flex w-[min(320px,85vw)] flex-col border-r-[3px] border-line bg-surface animate-rise-in">
+            <div className="flex items-center justify-between border-b-[3px] border-line px-4 py-3">
               <span className="font-serif text-[16px]">Aperture</span>
               <button
                 type="button"
@@ -192,7 +192,7 @@ export function AppShell({
             <div className="min-h-0 flex-1">
               <Timeline sessions={sessions} onNavigate={() => setSheetOpen(false)} />
             </div>
-            <div className="border-t border-line p-3">
+            <div className="border-t-[3px] border-line p-3">
               <button
                 type="button"
                 onClick={handleSignOut}

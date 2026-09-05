@@ -25,7 +25,7 @@ const DATA_CLASS_COPY: Record<string, string> = {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-card border border-line bg-surface px-4 py-3.5">
+    <div className="rounded-card brut bg-surface px-4 py-3.5">
       <p className="label">{label}</p>
       <p className="num mt-1.5 font-serif text-[24px] leading-none text-ink">{value}</p>
       {sub ? <p className="mt-1 text-[11.5px] text-ink-3">{sub}</p> : null}
@@ -117,10 +117,10 @@ export function SecurityPanel({
       {calls.length > 0 ? (
         <section>
           <p className="label mb-3">The ledger</p>
-          <div className="overflow-x-auto rounded-card border border-line bg-surface">
+          <div className="overflow-x-auto rounded-card brut bg-surface">
             <table className="w-full min-w-[620px] text-left font-mono text-[12px]">
               <thead>
-                <tr className="border-b border-line bg-sunken text-ink-3">
+                <tr className="border-b-[3px] border-line bg-sunken text-ink-3">
                   <th className="px-3 py-2 font-medium">When</th>
                   <th className="px-3 py-2 font-medium">Purpose</th>
                   <th className="px-3 py-2 font-medium">Model</th>
@@ -132,7 +132,7 @@ export function SecurityPanel({
               </thead>
               <tbody>
                 {calls.map((c) => (
-                  <tr key={c.id} className="border-b border-line last:border-0">
+                  <tr key={c.id} className="border-b-[3px] border-line last:border-0">
                     <td className="px-3 py-2 text-ink-3">{relativeTime(c.at)}</td>
                     <td className="px-3 py-2 text-ink-2">{c.purpose}</td>
                     <td className="px-3 py-2 text-ink-3">{c.model}</td>
@@ -170,7 +170,7 @@ export function SecurityPanel({
             {events.map((e) => (
               <li
                 key={e.id}
-                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-card border border-line bg-surface px-4 py-3"
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-card brut bg-surface px-4 py-3"
               >
                 <span
                   className={`rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
@@ -203,7 +203,7 @@ export function SecurityPanel({
 
         <a
           href="/api/account/export"
-          className="flex items-center justify-between rounded-card border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
+          className="flex items-center justify-between rounded-card brut bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
         >
           <span>
             <span className="block text-[14px] text-ink">Export everything</span>
@@ -232,7 +232,7 @@ export function SecurityPanel({
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Type DELETE EVERYTHING"
-              className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3 py-2 font-mono text-[12.5px] outline-none focus:border-danger"
+              className="min-w-0 flex-1 rounded-control brut-thin bg-surface px-3 py-2 font-mono text-[12.5px] outline-none focus:border-danger"
             />
             <button
               type="button"

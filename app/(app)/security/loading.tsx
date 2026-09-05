@@ -1,6 +1,8 @@
+import { PixelLoader } from '@/components/shell/pixel-loader';
+
 /**
- * The same breathing dot as the Closing Ritual — one loading vocabulary across
- * the app, rather than a spinner here and a breathing dot there.
+ * The same pixel loader as the Closing Ritual — one loading vocabulary across
+ * the app, rather than a spinner here and marching blocks there.
  *
  * ── WHY THIS IS NOT AT THE (app) LAYOUT LEVEL ──
  * A loading.tsx creates a Suspense boundary, and a Suspense boundary makes
@@ -21,7 +23,7 @@ export default function Loading() {
       role="status"
       aria-label="Loading"
     >
-      <span aria-hidden className="animate-breathe size-2 rounded-full bg-accent" />
+      <PixelLoader />
     </div>
   );
 }

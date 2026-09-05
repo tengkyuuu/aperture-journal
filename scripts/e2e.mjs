@@ -158,6 +158,48 @@ try {
   });
   anon.status === 401 ? ok('unauthenticated chat rejected', '401') : bad('unauthenticated chat', `got ${anon.status}`);
 
+  // ── Redirect integrity ───────────────────────────────────────────────────
+  // A cookie that EXISTS but does not VERIFY used to loop forever: middleware
+  // judges by presence and lets it through, the server judges by validity and
+  // bounces it back to sign-in, where middleware sees the cookie again.
+  //
+  // The old test asserted ONE hop and passed. Following the redirects is the
+  // whole point — a loop looks identical to a correct redirect until you do.
+  section('Redirect integrity');
+  {
+    async function hops(path, cookie, limit = 10) {
+      let url = `${BASE}${path}`;
+      const chain = [];
+      for (let i = 0; i < limit; i++) {
+        const r = await fetch(url, {
+          headers: cookie ? { Cookie: cookie } : {},
+          redirect: 'manual',
+        });
+        if (r.status < 300 || r.status >= 400) return { chain, status: r.status };
+        const next = r.headers.get('location');
+        if (!next) return { chain, status: r.status };
+        url = new URL(next, url).toString();
+        chain.push(url);
+      }
+      return { chain, status: null, looped: true };
+    }
+
+    for (const [label, cookie] of [
+      ['malformed cookie', '__session=stale.invalid.cookie'],
+      ['expired cookie', `__session=${Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url')}.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 3600 })).toString('base64url')}.sig`],
+    ]) {
+      const r = await hops('/today', cookie);
+      r.looped
+        ? bad(label, `redirect loop — ${r.chain.length}+ hops`)
+        : ok(label, `settles in ${r.chain.length} hop(s) at ${r.status}`);
+    }
+
+    const clean = await hops('/today', null);
+    clean.looped
+      ? bad('no cookie', 'redirect loop')
+      : ok('no cookie', `settles in ${clean.chain.length} hop(s) at ${clean.status}`);
+  }
+
   // ── Chat ─────────────────────────────────────────────────────────────────
   section('Multi-turn conversation');
   const t0 = Date.now();

@@ -67,6 +67,33 @@ function buildCsp(nonce: string): string {
     .trim();
 }
 
+/**
+ * Does this cookie look plainly dead, without verifying it?
+ *
+ * ══ THIS IS NOT A SECURITY CHECK ══
+ * It reads the JWT payload WITHOUT validating the signature, which any
+ * attacker can forge. It decides which PAGE to show, nothing else. Real
+ * verification is verifySessionCookie() in the Node runtime, and every page
+ * and route still does it.
+ *
+ * It exists to stop a redirect loop. Middleware can only see that a cookie is
+ * present; the server can see that it is invalid. When they disagree, each
+ * bounces to the other forever. Catching the obviously-expired case here means
+ * the loop cannot even begin for the most common cause of the disagreement.
+ */
+function looksDead(cookie: string): boolean {
+  const parts = cookie.split('.');
+  if (parts.length !== 3) return true; // not a JWT at all
+
+  try {
+    const json = atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = (JSON.parse(json) as { exp?: number }).exp;
+    return typeof exp !== 'number' || exp * 1000 <= Date.now();
+  } catch {
+    return true; // unparseable is dead enough
+  }
+}
+
 export function middleware(req: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const csp = buildCsp(nonce);
@@ -78,7 +105,9 @@ export function middleware(req: NextRequest) {
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);
 
-  const hasCookie = req.cookies.has(SESSION_COOKIE_NAME);
+  const cookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  // "Might be signed in" — not "is signed in". The server decides that.
+  const hasCookie = Boolean(cookie) && !looksDead(cookie!);
   const { pathname } = req.nextUrl;
 
   let res: NextResponse;

@@ -80,7 +80,7 @@ export function InsightsView({ sessions }: { sessions: SessionSummary[] }) {
             <li key={s.id}>
               <Link
                 href={`/session/${s.id}`}
-                className="flex items-baseline gap-3 rounded-card border border-line bg-surface px-4 py-3 transition-colors hover:border-line-strong"
+                className="flex items-baseline gap-3 rounded-card brut bg-surface px-4 py-3 transition-colors hover:border-line-strong"
               >
                 <span
                   aria-hidden

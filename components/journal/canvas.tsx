@@ -330,11 +330,11 @@ export function Canvas({
       ) : null}
 
       {canSeal ? (
-        <div className="flex flex-wrap items-center gap-3 border-t border-line pt-5">
+        <div className="flex flex-wrap items-center gap-3 border-t-[3px] border-line pt-5">
           <button
             type="button"
             onClick={requestSeal}
-            className="inline-flex items-center gap-2 rounded-full border border-sealed/50 px-3.5 py-1.5 text-[12.5px] text-sealed transition-colors hover:bg-sealed/[0.07]"
+            className="brut-press-sm inline-flex items-center gap-2 rounded-control border-[3px] border-line bg-sealed px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wide text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)]"
           >
             <IconVault className="size-3.5" />
             Seal this entry
@@ -395,7 +395,7 @@ function SealCeremony() {
       role="status"
       aria-live="polite"
     >
-      <div className="animate-seal-press grid size-16 place-items-center rounded-full bg-sealed text-white shadow-lg">
+      <div className="animate-seal-press grid size-16 place-items-center rounded-full bg-sealed text-white shadow-[var(--shadow-brut)]">
         <IconVault className="size-7" />
       </div>
       <span className="label text-sealed">sealing</span>

@@ -104,7 +104,7 @@ export function VaultGate({
       onClick={(e) => {
         if (e.target === dialogRef.current) dialogRef.current?.close();
       }}
-      className="m-0 w-full max-w-md rounded-sheet border border-line bg-elevated p-0 text-ink backdrop:bg-black/50 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[10vh]"
+      className="m-0 w-full max-w-md rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/50 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[10vh]"
     >
       <form onSubmit={submit} className="flex flex-col gap-5 p-6">
         <div>
@@ -134,7 +134,7 @@ export function VaultGate({
             autoComplete={setup ? 'new-password' : 'current-password'}
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
-            className="rounded-control border border-line bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
+            className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
           />
 
           {setup && passphrase ? (
@@ -167,7 +167,7 @@ export function VaultGate({
               autoComplete="new-password"
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
-              className="rounded-control border border-line bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
+              className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
             />
           </div>
         ) : null}

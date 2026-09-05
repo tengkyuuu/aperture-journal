@@ -97,9 +97,9 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
       onClick={(e) => {
         if (e.target === dialogRef.current) close();
       }}
-      className="m-0 w-full max-w-lg rounded-sheet border border-line bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[12vh]"
+      className="m-0 w-full max-w-lg rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[12vh]"
     >
-      <div className="border-b border-line px-4">
+      <div className="border-b-[3px] border-line px-4">
         <input
           autoFocus
           value={query}
@@ -140,7 +140,7 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
         )}
       </ul>
 
-      <div className="flex items-center gap-3 border-t border-line px-4 py-2.5 text-[11px] text-ink-3">
+      <div className="flex items-center gap-3 border-t-[3px] border-line px-4 py-2.5 text-[11px] text-ink-3">
         <span>
           <kbd className="font-mono">↑↓</kbd> navigate
         </span>

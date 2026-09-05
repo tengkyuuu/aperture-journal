@@ -6,6 +6,7 @@ import { RecentSessions } from '@/components/home/recent-sessions';
 import { WeekStrip } from '@/components/home/week-strip';
 import { MoodTint } from '@/components/shell/mood-tint';
 import { getSession } from '@/lib/server/auth';
+import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { getHomeDigest } from '@/lib/server/queries';
 import { longDate } from '@/lib/shared/format';
 
@@ -44,7 +45,7 @@ function promptForToday(): string {
 
 export default async function TodayPage() {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   const digest = await getHomeDigest(session.uid);
   const firstName = (session.name as string | undefined)?.split(' ')[0];
@@ -76,7 +77,7 @@ export default async function TodayPage() {
       <Canvas placeholder={promptForToday()} />
 
       {!isNew ? (
-        <div className="mt-16 flex flex-col gap-12 border-t border-line pt-12">
+        <div className="mt-16 flex flex-col gap-12 border-t-[3px] border-line pt-12">
           <OpenLoops loops={digest.openLoops} />
           <WeekStrip
             sessions={digest.recent}

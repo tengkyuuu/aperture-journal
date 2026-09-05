@@ -4,6 +4,7 @@ import { Fragment, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import { IconAsk } from '@/components/shell/icons';
+import { PixelLoader } from '@/components/shell/pixel-loader';
 import { apiPost } from '@/lib/client/api';
 
 interface Citation {
@@ -94,7 +95,7 @@ export function AskView() {
           e.preventDefault();
           void ask(question);
         }}
-        className="flex items-center gap-2 rounded-card border border-line bg-surface px-3 py-2 transition-colors focus-within:border-line-strong"
+        className="flex items-center gap-2 rounded-card brut bg-surface px-3 py-2 transition-colors focus-within:border-line-strong"
       >
         <IconAsk className="size-4 shrink-0 text-ink-3" />
         <input
@@ -127,7 +128,7 @@ export function AskView() {
                   setQuestion(s);
                   void ask(s);
                 }}
-                className="rounded-full border border-line px-3 py-1.5 text-[12.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+                className="rounded-full border-2 border-line px-3 py-1.5 text-[12.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
               >
                 {s}
               </button>
@@ -144,7 +145,7 @@ export function AskView() {
 
       {busy && !answer ? (
         <div className="flex items-center gap-3 py-6" role="status" aria-live="polite">
-          <span aria-hidden className="animate-breathe size-2 rounded-full bg-accent" />
+          <PixelLoader />
           <span className="label">searching your entries</span>
         </div>
       ) : null}
@@ -162,7 +163,7 @@ export function AskView() {
           </div>
 
           {!busy && citations.length > 0 ? (
-            <div className="flex flex-col gap-2 border-t border-line pt-5">
+            <div className="flex flex-col gap-2 border-t-[3px] border-line pt-5">
               <p className="label">Drawn from</p>
               <ul className="flex flex-col gap-1">
                 {citations.map((c) => (

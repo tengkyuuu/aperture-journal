@@ -27,7 +27,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
   return (
     <div className="flex flex-col gap-8">
       {/* ── Status ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-card brut bg-surface p-4">
         <span
           aria-hidden
           className={`grid size-9 place-items-center rounded-full ${
@@ -58,7 +58,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
           <button
             type="button"
             onClick={vault.lock}
-            className="rounded-control border border-line px-3 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+            className="rounded-control brut-thin px-3 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
           >
             Lock
           </button>
@@ -74,7 +74,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
       </div>
 
       {/* ── How it works ───────────────────────────────────────────────── */}
-      <section className="rounded-card border border-line bg-surface p-5">
+      <section className="rounded-card brut bg-surface p-5">
         <p className="label mb-3">What sealing actually does</p>
         <ul className="flex flex-col gap-2.5 text-[13.5px] leading-relaxed text-ink-2">
           <li className="grid grid-cols-[14px_1fr] gap-3">
@@ -125,7 +125,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
               <li key={s.id}>
                 <Link
                   href={`/session/${s.id}`}
-                  className="flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 transition-colors hover:border-line-strong"
+                  className="flex items-center gap-3 rounded-card brut bg-surface px-4 py-3 transition-colors hover:border-line-strong"
                 >
                   <IconVault className="size-4 shrink-0 text-sealed" />
                   <span className="min-w-0 flex-1">

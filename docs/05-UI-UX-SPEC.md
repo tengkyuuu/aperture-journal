@@ -1,7 +1,8 @@
 # UI/UX Design Contract — "Quiet Ink"
 
-> **Status: implemented, and extended past the original contract.** See
-> "What shipped beyond this contract" at the end.
+> **SUPERSEDED** by ["Paper Cut"](09-DESIGN-PAPER-CUT.md), a neo-brutalist system.
+> Kept as the record of what came before: the layout, screen inventory, states and
+> accessibility contract below all still hold — only the visual language changed.
 
 ## Design thesis
 

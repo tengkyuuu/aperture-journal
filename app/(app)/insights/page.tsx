@@ -2,13 +2,14 @@ import { redirect } from 'next/navigation';
 
 import { InsightsView } from '@/components/insights/insights-view';
 import { getSession } from '@/lib/server/auth';
+import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { listInsightSessions } from '@/lib/server/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default async function InsightsPage() {
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  if (!session) redirect(CLEAR_SESSION_PATH);
 
   // Sealed sessions are absent by construction — sealing deletes the insights,
   // so there is nothing here to filter out.
