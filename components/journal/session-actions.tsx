@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { apiPost } from '@/lib/client/api';
+import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
+import { Notice } from '@/components/feedback/notice';
+import { toast } from '@/components/feedback/toaster';
 
 /**
  * Rename or delete a single entry.
@@ -34,7 +37,7 @@ export function SessionActions({
   const [draft, setDraft] = useState(title ?? '');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   useEffect(() => setDraft(title ?? ''), [title]);
 
@@ -45,7 +48,7 @@ export function SessionActions({
       return;
     }
     setBusy(true);
-    setError(null);
+    setFailure(null);
     try {
       const res = await apiPost('/api/session/manage', {
         action: 'rename',
@@ -53,11 +56,16 @@ export function SessionActions({
         title: next,
       });
       if (!res.ok) {
-        setError('That name did not save.');
+        setFailure(await failureFrom(res));
         return;
       }
       setEditing(false);
+      toast('Renamed.');
       router.refresh();
+    } catch (err) {
+      // There was no catch here at all: a thrown fetch left `busy` cleared by
+      // the finally and nothing on screen to say the rename had not happened.
+      setFailure(failureFromThrown(err));
     } finally {
       setBusy(false);
     }
@@ -66,7 +74,7 @@ export function SessionActions({
   async function remove() {
     if (confirm !== 'DELETE' || busy) return;
     setBusy(true);
-    setError(null);
+    setFailure(null);
     try {
       const res = await apiPost('/api/session/manage', {
         action: 'delete',
@@ -74,15 +82,19 @@ export function SessionActions({
         confirm,
       });
       if (!res.ok) {
-        setError('Deletion did not complete. Nothing was removed.');
+        setFailure(await failureFrom(res));
         setBusy(false);
         return;
       }
       dialogRef.current?.close();
       router.replace('/today');
       router.refresh();
-    } catch {
-      setError('Deletion did not complete. Nothing was removed.');
+      // Fired after the navigation on purpose. The Toaster lives in AppShell,
+      // above the routes, so it outlives the page that triggered it — which is
+      // the only way a delete can ever confirm itself.
+      toast('Entry deleted.');
+    } catch (err) {
+      setFailure(failureFromThrown(err));
       setBusy(false);
     }
   }
@@ -143,7 +155,7 @@ export function SessionActions({
             type="button"
             onClick={() => {
               setConfirm('');
-              setError(null);
+              setFailure(null);
               dialogRef.current?.showModal();
             }}
             className="brut-press-sm ml-auto rounded-control border-[3px] border-line bg-surface px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-danger shadow-[3px_3px_0_0_var(--border-ink)]"
@@ -153,11 +165,9 @@ export function SessionActions({
         </>
       )}
 
-      {error && !dialogRef.current?.open ? (
-        <p role="alert" className="w-full text-[13px] font-medium text-danger">
-          {error}
-        </p>
-      ) : null}
+      {/* Only outside the dialog. The one inside owns the in-dialog case, and
+          rendering both would announce the same failure twice. */}
+      {!editing ? <Notice failure={failure} className="w-full" /> : null}
 
       <dialog
         ref={dialogRef}
@@ -193,11 +203,11 @@ export function SessionActions({
             />
           </div>
 
-          {error ? (
-            <p role="alert" className="animate-shake text-[13px] font-medium text-danger">
-              {error}
-            </p>
-          ) : null}
+          {/* No retry button on a destructive action. A failed delete may have
+              partially completed, and a retry button is how you get a double
+              delete. Pressing Delete again is a deliberate act; a button that
+              says "try again" is not. */}
+          <Notice failure={failure} />
 
           <div className="flex items-center justify-end gap-2">
             <button

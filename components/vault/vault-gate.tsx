@@ -31,6 +31,16 @@ export function VaultGate({
   const [acknowledged, setAcknowledged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped on every failure so the shake replays. Setting the same error
+  // string twice leaves the <p> mounted, and a CSS animation on an already
+  // mounted node does not restart — so the second wrong passphrase used to
+  // look exactly like nothing happening.
+  const [errNonce, setErrNonce] = useState(0);
+
+  const bump = (msg: string | null) => {
+    setError(msg);
+    if (msg) setErrNonce((n) => n + 1);
+  };
 
   const setup = vault.status === 'uninitialised';
   const verdict = ratePassphrase(passphrase);
@@ -46,40 +56,40 @@ export function VaultGate({
     setPassphrase('');
     setConfirmation('');
     setAcknowledged(false);
-    setError(null);
+    bump(null);
     setBusy(false);
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
-    setError(null);
+    bump(null);
     setBusy(true);
 
     try {
       if (setup) {
         if (passphrase !== confirmation) {
-          setError('The two passphrases do not match.');
+          bump('The two passphrases do not match.');
           return;
         }
         if (!verdict.ok) {
-          setError(verdict.hint);
+          bump(verdict.hint);
           return;
         }
         if (!acknowledged) {
-          setError('Please confirm you understand that this cannot be recovered.');
+          bump('Please confirm you understand that this cannot be recovered.');
           return;
         }
         const ok = await vault.initialise(passphrase);
         if (!ok) {
-          setError('The vault could not be created. Try again.');
+          bump('The vault could not be created. Try again.');
           return;
         }
       } else {
         const ok = await vault.unlock(passphrase);
         if (!ok) {
           // No detail. "Wrong passphrase" and "no such vault" look identical.
-          setError('That passphrase does not open this vault.');
+          bump('That passphrase does not open this vault.');
           return;
         }
       }
@@ -134,6 +144,9 @@ export function VaultGate({
             autoComplete={setup ? 'new-password' : 'current-password'}
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={setup && passphrase ? 'vault-pass-hint' : undefined}
+            aria-errormessage={error ? 'vault-error' : undefined}
             className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
           />
 
@@ -155,7 +168,9 @@ export function VaultGate({
           ) : null}
 
           {setup && passphrase ? (
-            <p className="text-[12px] leading-relaxed text-ink-3">{verdict.hint}</p>
+            <p id="vault-pass-hint" className="text-[12px] leading-relaxed text-ink-3">
+              {verdict.hint}
+            </p>
           ) : null}
         </div>
 
@@ -170,8 +185,22 @@ export function VaultGate({
               autoComplete="new-password"
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
+              // Only once the confirmation is at least as long as the thing it
+              // confirms. Flagging a mismatch mid-word would mark every
+              // correctly-typed passphrase invalid on the way to being right.
+              aria-invalid={
+                confirmation.length >= passphrase.length && confirmation !== passphrase
+                  ? true
+                  : undefined
+              }
+              aria-describedby="vault-confirm-hint"
               className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
             />
+            <p id="vault-confirm-hint" className="text-[12px] text-ink-3">
+              {confirmation.length >= passphrase.length && confirmation !== passphrase
+                ? 'These two do not match yet.'
+                : 'Typed twice, because there is no way to recover it.'}
+            </p>
           </div>
         ) : null}
 
@@ -191,7 +220,12 @@ export function VaultGate({
         ) : null}
 
         {error ? (
-          <p role="alert" className="text-[13px] text-danger">
+          <p
+            key={errNonce}
+            id="vault-error"
+            role="alert"
+            className="animate-shake rounded-control border-[3px] border-line bg-danger px-3 py-2 text-[13px] font-medium text-[#111111]"
+          >
             {error}
           </p>
         ) : null}

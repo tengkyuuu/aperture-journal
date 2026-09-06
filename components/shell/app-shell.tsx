@@ -8,6 +8,8 @@ import { signOutEverywhere } from '@/lib/client/firebase';
 import { initials } from '@/lib/shared/format';
 import type { SessionSummary, UserProfile } from '@/lib/shared/types';
 
+import { Toaster } from '@/components/feedback/toaster';
+
 import { CommandPalette } from './command-palette';
 import { Shortcuts } from './shortcuts';
 import { IconClose, IconMenu } from './icons';
@@ -240,6 +242,10 @@ export function AppShell({
 
       <CommandPalette sessions={sessions} />
       <Shortcuts />
+      {/* One instance for the whole app. It lives above the routes so an
+          acknowledgement survives the navigation that caused it — deleting an
+          entry redirects to /today and the toast has to outlive that. */}
+      <Toaster />
     </div>
   );
 }

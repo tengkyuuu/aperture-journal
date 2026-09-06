@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { toast } from '@/components/feedback/toaster';
+
 import { deriveKey, makeCheck, newSalt, verifyCheck } from '@/lib/client/vault';
 import { apiPost } from '@/lib/client/api';
 
@@ -55,7 +57,14 @@ export function VaultProvider({
   const lock = useCallback(() => {
     // Dropping the reference is the whole mechanism. The CryptoKey was created
     // non-extractable, so there is no copy of the key material to scrub.
-    setState(hasVault ? { status: 'locked' } : { status: 'uninitialised' });
+    setState((prev) => {
+      // Say so, but only on a real transition. The idle timer fires this every
+      // fifteen minutes regardless of state, and until now it did so in total
+      // silence — sealed text on screen simply went blank and the passphrase
+      // was wanted again, with nothing anywhere explaining why.
+      if (prev.status === 'unlocked') toast('Vault locked.', { tone: 'warn' });
+      return hasVault ? { status: 'locked' } : { status: 'uninitialised' };
+    });
   }, [hasVault]);
 
   // Idle auto-lock, reset on real interaction.
@@ -118,6 +127,7 @@ export function VaultProvider({
       const key = await deriveKey(passphrase, salt);
       if (!(await verifyCheck(key, check))) return false;
       setState({ status: 'unlocked', key });
+      toast('Vault unlocked.');
       return true;
     },
     [salt, check],

@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 
 import { decrypt, encrypt } from '@/lib/client/vault';
 import { apiPost } from '@/lib/client/api';
+import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
+import { Notice } from '@/components/feedback/notice';
+import { toast } from '@/components/feedback/toaster';
 import type { ConversationMode } from '@/lib/config';
 import type { Insights, StoredMessage } from '@/lib/shared/types';
 import { useVault } from '@/components/vault/vault-provider';
@@ -72,7 +75,7 @@ export function Canvas({
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<ConversationMode>(initialMode);
   const [streaming, setStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [insights, setInsights] = useState<Insights | null>(initialInsights);
   const [ritual, setRitual] = useState<RitualState>(initialInsights ? 'revealed' : 'idle');
   const [sealState, setSealState] = useState<SealState>(sealed ? 'sealed' : 'idle');
@@ -114,7 +117,8 @@ export function Canvas({
           setDecrypted(true);
         }
       } catch {
-        if (!cancelled) setError('These entries could not be decrypted with that passphrase.');
+        if (!cancelled)
+          setFailure({ kind: 'unavailable', detail: 'These entries could not be decrypted with that passphrase.' });
       }
     })();
     return () => {
@@ -128,7 +132,7 @@ export function Canvas({
     if (!message || streaming || ritual !== 'idle') return;
 
     setInput('');
-    setError(null);
+    setFailure(null);
     setStreaming(true);
 
     /**
@@ -161,13 +165,7 @@ export function Canvas({
       });
 
       if (!res.ok || !res.body) {
-        setError(
-          res.status === 429
-            ? "You've reached today's limit. It resets at midnight UTC."
-            : res.status === 503
-              ? 'Gemini is busy right now. Your entry is still here — try again in a moment.'
-              : 'That did not go through. Your entry is still in the box above.',
-        );
+        setFailure(await failureFrom(res));
         setInput(message);
         setTurns((t) => t.slice(0, -2));
         return;
@@ -200,16 +198,16 @@ export function Canvas({
       } else {
         router.refresh();
       }
-    } catch {
+    } catch (err) {
       if (phase === 'request') {
         // Nothing reached the server. Give the writing back.
-        setError('Connection lost before that could be sent. It is back in the box above.');
+        setFailure(failureFromThrown(err));
         setTurns((t) => t.slice(0, -2));
         setInput(message);
       } else {
         // It was saved; only the reply was cut off. Restoring the composer here
         // would duplicate the entry, so drop the empty model turn and re-read.
-        setError('The connection dropped mid-reply. Your entry was saved — reload to see where it got to.');
+        setFailure({ kind: 'unavailable', detail: 'The connection dropped mid-reply. Your entry was saved — reload to see where it got to.' });
         setTurns((t) => {
           const last = t[t.length - 1];
           return last && last.role === 'model' && last.content === '' ? t.slice(0, -1) : t;
@@ -226,7 +224,7 @@ export function Canvas({
     if (!sessionId.current || ritual !== 'idle' || streaming) return;
 
     setRitual('distilling');
-    setError(null);
+    setFailure(null);
     const startedAt = Date.now();
 
     try {
@@ -239,13 +237,11 @@ export function Canvas({
 
       if (!res.ok) {
         setRitual('idle');
-        setError(
-          res.status === 422
-            ? 'There is not enough here to distil yet. Write a little more.'
-            : res.status === 503
-              ? 'Gemini is busy right now. Your session is safe — try ending it again shortly.'
-              : 'The summary did not come through. Your session is safe — try ending it again.',
-        );
+        // Previously this told an out-of-quota user to "try ending it again",
+        // which cannot succeed until midnight UTC and spends more quota on
+        // every attempt. The taxonomy now decides whether retrying is even
+        // offered, so that cannot be reintroduced by forgetting a branch here.
+        setFailure(await failureFrom(res));
         return;
       }
 
@@ -255,7 +251,7 @@ export function Canvas({
       router.refresh();
     } catch {
       setRitual('idle');
-      setError('The summary did not come through. Your session is safe.');
+      setFailure({ kind: 'unavailable', detail: 'The summary did not come through. Your session is safe.' });
     }
   }
 
@@ -264,7 +260,7 @@ export function Canvas({
     const id = sessionId.current;
     if (!id || !vault.key || sealState !== 'idle') return;
 
-    setError(null);
+    setFailure(null);
     setSealState('sealing');
 
     try {
@@ -277,7 +273,7 @@ export function Canvas({
 
       if (payload.length === 0) {
         setSealState('idle');
-        setError('There is nothing here to seal yet.');
+        setFailure({ kind: 'unavailable', detail: 'There is nothing here to seal yet.' });
         return;
       }
 
@@ -289,17 +285,21 @@ export function Canvas({
 
       if (!res.ok) {
         setSealState('idle');
-        setError('The entry could not be sealed. Nothing was changed.');
+        setFailure({ kind: 'unavailable', detail: 'The entry could not be sealed. Nothing was changed.' });
         return;
       }
 
       setSealState('sealed');
       setInsights(null);
       setRitual('idle');
+      toast('Sealed. Encrypted in this browser.', {
+        tone: 'warn',
+        action: { label: 'Vault', onClick: () => router.push('/vault') },
+      });
       router.refresh();
     } catch {
       setSealState('idle');
-      setError('The entry could not be sealed. Nothing was changed.');
+      setFailure({ kind: 'unavailable', detail: 'The entry could not be sealed. Nothing was changed.' });
     }
   }, [turns, vault.key, sealState, router]);
 
@@ -372,11 +372,11 @@ export function Canvas({
       {ritual === 'distilling' ? <Distilling /> : null}
       {ritual === 'revealed' && insights ? <InsightReveal insights={insights} /> : null}
 
-      {error ? (
-        <p role="alert" className="text-[13px] text-danger">
-          {error}
-        </p>
-      ) : null}
+      {/* Retry re-sends whatever is in the composer. Safe on both paths: the
+          request-phase failure already put the text back, and the stream-phase
+          one deliberately did not — so there send() finds an empty box and
+          returns without doing anything. isRetryable() owns the rest. */}
+      <Notice failure={failure} onRetry={send} />
 
       {showComposer ? (
         <Composer

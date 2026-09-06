@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { signInWithGoogle } from '@/lib/client/firebase';
+import { failureFromThrown, type Failure } from '@/lib/client/errors';
+import { Notice } from '@/components/feedback/notice';
 import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { PixelLoader } from '@/components/shell/pixel-loader';
 
@@ -27,18 +29,18 @@ export default function SignInPage() {
   const expired = useSearchParams().get('expired') === '1';
 
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   async function handleSignIn() {
     setBusy(true);
-    setError(null);
+    setFailure(null);
     try {
       await signInWithGoogle();
       router.replace('/today');
       router.refresh();
-    } catch {
+    } catch (err) {
       // Generic on purpose. The detail is in the server log, not on screen.
-      setError('Sign-in did not complete. Please try again.');
+      setFailure(failureFromThrown(err));
       setBusy(false);
     }
   }
@@ -89,13 +91,8 @@ export default function SignInPage() {
           {busy ? 'Signing in…' : 'Continue with Google'}
         </button>
 
-        {error ? (
-          <p
-            role="alert"
-            className="animate-shake mt-4 rounded-control border-[3px] border-line bg-danger px-3 py-2 text-[13px] font-medium text-[#111111]"
-          >
-            {error}
-          </p>
+        {failure ? (
+          <Notice failure={failure} onRetry={handleSignIn} retryLabel="Retry" className="mt-4" />
         ) : expired ? (
           <p className="mt-4 rounded-control border-[3px] border-line bg-sunken px-3 py-2 text-[13px] text-ink-2">
             Your session expired. Sign in again to pick up where you left off.

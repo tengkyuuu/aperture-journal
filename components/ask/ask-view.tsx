@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { IconAsk } from '@/components/shell/icons';
 import { PixelLoader } from '@/components/shell/pixel-loader';
 import { apiPost } from '@/lib/client/api';
+import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
+import { Notice } from '@/components/feedback/notice';
 
 interface Citation {
   id: string;
@@ -34,7 +36,7 @@ export function AskView() {
   const [answer, setAnswer] = useState('');
   const [citations, setCitations] = useState<Citation[]>([]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [asked, setAsked] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +45,7 @@ export function AskView() {
     if (!text || busy) return;
 
     setBusy(true);
-    setError(null);
+    setFailure(null);
     setAnswer('');
     setCitations([]);
     setAsked(text);
@@ -52,16 +54,9 @@ export function AskView() {
       const res = await apiPost('/api/ask', { question: text });
 
       if (!res.ok || !res.body) {
-        if (res.status === 422) {
-          const data = (await res.json()) as { message?: string };
-          setError(data.message ?? 'There is nothing to search yet.');
-        } else if (res.status === 429) {
-          setError("You've reached today's limit. It resets at midnight UTC.");
-        } else if (res.status === 503) {
-          setError('Gemini is busy right now. Try that question again in a moment.');
-        } else {
-          setError('That question did not go through. Try again.');
-        }
+        // The 422 case carries the server's own sentence — an empty corpus is
+        // something the server can explain better than this component can.
+        setFailure(await failureFrom(res));
         return;
       }
 
@@ -81,8 +76,8 @@ export function AskView() {
         if (done) break;
         setAnswer((a) => a + decoder.decode(value, { stream: true }));
       }
-    } catch {
-      setError('Connection lost. Try again.');
+    } catch (err) {
+      setFailure(failureFromThrown(err));
     } finally {
       setBusy(false);
     }
@@ -137,11 +132,8 @@ export function AskView() {
         </div>
       ) : null}
 
-      {error ? (
-        <p role="alert" className="text-[13.5px] text-danger">
-          {error}
-        </p>
-      ) : null}
+      {/* Retry re-asks the question that failed. */}
+      <Notice failure={failure} onRetry={asked ? () => void ask(asked) : undefined} />
 
       {busy && !answer ? (
         <div className="flex items-center gap-3 py-6" role="status" aria-live="polite">

@@ -288,6 +288,36 @@
   }
 
   /*
+    Skeletons.
+
+    3px, not 2px, and the same radius as a real card: this stands in for a
+    .brut block, and matching the border weight means the content lands with
+    ZERO reflow. A skeleton that shifts the layout when it resolves is worse
+    than no skeleton — it draws the eye to the wrong thing at the worst moment.
+  */
+  .skel {
+    display: block;
+    border: 3px solid var(--border-ink);
+    border-radius: var(--radius-card);
+    background: var(--bg-sunken);
+  }
+
+  /* A line of prose has no border, so neither does its stand-in. A bordered
+     bar per line would read as a table. */
+  .skel-line {
+    display: block;
+    height: 0.9em;
+    border-radius: 2px;
+    background: var(--bg-sunken);
+  }
+
+  /* Invalid is said with the border, which is this system's own language.
+     No glow, no ring — those belong to a design system this is not. */
+  [aria-invalid='true'] {
+    border-color: var(--danger);
+  }
+
+  /*
    * THE MECHANICAL PRESS.
    *
    * Hover lifts the element away from its shadow; pressing drives it down by
@@ -491,6 +521,34 @@
   .animate-fade-in {
     animation: fade-in 0.2s linear both;
   }
+  /*
+    Two flat fills swapped on a hard step.
+
+    NOT a shimmer: a shimmer is a gradient travelling under a mask, and this
+    system has no gradients. NOT a pulse either — a smooth opacity sine is the
+    exact thing pixel-loader.tsx rejects, because it reads as "something is
+    smoothly happening" when nothing is. This is the same grammar as
+    pixel-march and caret-blink: discrete frames, machine ticking.
+
+    No animation-fill-mode on purpose. Both reduced-motion tracks below cut
+    iteration-count to 1, after which the element falls back to its own
+    declared background and simply sits there — so this needs no reduced-motion
+    rule of its own.
+  */
+  @keyframes block-tick {
+    0%,
+    49% {
+      background-color: var(--bg-sunken);
+    }
+    50%,
+    100% {
+      background-color: var(--bg-elevated);
+    }
+  }
+  .animate-block-tick {
+    animation: block-tick 1.4s steps(1, end) infinite;
+  }
+
   .animate-caret {
     animation: caret-blink 1s steps(1, end) infinite;
   }

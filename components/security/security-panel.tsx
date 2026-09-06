@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { relativeTime } from '@/lib/shared/format';
 import type { AiCall, SecurityEvent } from '@/lib/shared/types';
 import { apiPost } from '@/lib/client/api';
+import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
+import { Notice } from '@/components/feedback/notice';
 
 /**
  * The Security page.
@@ -46,7 +48,7 @@ export function SecurityPanel({
   const router = useRouter();
   const [confirm, setConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   const totalIn = calls.reduce((n, c) => n + c.inputTokens, 0);
   const totalOut = calls.reduce((n, c) => n + c.outputTokens, 0);
@@ -56,18 +58,18 @@ export function SecurityPanel({
   async function handleDelete() {
     if (confirm !== 'DELETE EVERYTHING' || deleting) return;
     setDeleting(true);
-    setError(null);
+    setFailure(null);
     try {
       const res = await apiPost('/api/account/delete', { confirm });
       if (!res.ok) {
-        setError('Deletion did not complete. Nothing was removed.');
+        setFailure(await failureFrom(res));
         setDeleting(false);
         return;
       }
       router.replace('/sign-in');
       router.refresh();
-    } catch {
-      setError('Deletion did not complete. Nothing was removed.');
+    } catch (err) {
+      setFailure(failureFromThrown(err));
       setDeleting(false);
     }
   }
@@ -245,11 +247,10 @@ export function SecurityPanel({
             </button>
           </div>
 
-          {error ? (
-            <p role="alert" className="mt-2.5 text-[12.5px] text-danger">
-              {error}
-            </p>
-          ) : null}
+          {/* No retry button. A failed account deletion may have partially
+              completed, and inviting a second attempt on the most destructive
+              action in the app is how you compound the damage. */}
+          <Notice failure={failure} className="mt-2.5" />
         </div>
       </section>
     </div>

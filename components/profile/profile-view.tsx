@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { apiPost } from '@/lib/client/api';
+import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
+import { Notice } from '@/components/feedback/notice';
+import { toast } from '@/components/feedback/toaster';
 import { MODE_LABELS, type ConversationMode } from '@/lib/config';
 import { initials, relativeTime } from '@/lib/shared/format';
 import type { ProfileStats, UserProfile } from '@/lib/shared/types';
@@ -48,7 +51,7 @@ export function ProfileView({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   const [defaultMode, setDefaultMode] = useState(user.settings.defaultMode);
   const [reduceMotion, setReduceMotion] = useState(user.settings.reduceMotion);
@@ -56,17 +59,21 @@ export function ProfileView({
 
   async function save(patch: Record<string, unknown>, key: string) {
     setSaving(key);
-    setError(null);
+    setFailure(null);
     try {
       const res = await apiPost('/api/account/settings', patch);
       if (!res.ok) {
-        setError('That did not save. Try again.');
+        setFailure(await failureFrom(res));
         return false;
       }
       startTransition(() => router.refresh());
+      // One toast per save. Because the Toaster shows one at a time and
+      // replaces rather than stacks, flipping three toggles in a row produces
+      // a single "Saved." instead of a queue of them.
+      toast('Saved.');
       return true;
-    } catch {
-      setError('That did not save. Try again.');
+    } catch (err) {
+      setFailure(failureFromThrown(err));
       return false;
     } finally {
       setSaving(null);
@@ -280,11 +287,9 @@ export function ProfileView({
             <PixelLoader size="sm" /> saving
           </p>
         ) : null}
-        {error ? (
-          <p role="alert" className="animate-shake text-[13px] font-medium text-danger">
-            {error}
-          </p>
-        ) : null}
+        {/* No retry button: these controls revert on failure, so the toggle
+            itself IS the retry. */}
+        <Notice failure={failure} />
       </section>
 
       {/* ── Elsewhere ─────────────────────────────────────────────────── */}
