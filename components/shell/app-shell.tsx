@@ -9,6 +9,7 @@ import { initials } from '@/lib/shared/format';
 import type { SessionSummary, UserProfile } from '@/lib/shared/types';
 
 import { Toaster } from '@/components/feedback/toaster';
+import { useOnline } from '@/hooks/use-online';
 
 import { CommandPalette } from './command-palette';
 import { Shortcuts } from './shortcuts';
@@ -16,6 +17,30 @@ import { IconClose, IconMenu } from './icons';
 import { NAV } from './nav';
 import { ThemeToggle } from './theme-toggle';
 import { Timeline } from './timeline';
+
+/**
+ * Says the browser has no network.
+ *
+ * Deliberately never says anything about what happens next. navigator.onLine
+ * being true is not a promise of connectivity — a captive portal reports
+ * online — and there is no background sync here, so promising to send it later
+ * would be a lie. It reports a fact and stops.
+ */
+function OfflineChip({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      role="status"
+      title="No network. You can still write — sending is what stops."
+      className={
+        compact
+          ? 'grid size-9 place-items-center rounded-control border-2 border-line bg-danger text-[9px] font-bold uppercase text-[#111111]'
+          : 'chip-brut bg-danger text-[#111111]'
+      }
+    >
+      {compact ? 'off' : 'offline'}
+    </span>
+  );
+}
 
 /**
  * The app shell.
@@ -38,6 +63,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const online = useOnline();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // Any navigation closes the sheet — otherwise it lingers over the new page.
@@ -121,6 +147,13 @@ export function AppShell({
         </nav>
 
         <div className="mt-auto flex flex-col items-center gap-1">
+          {/*
+            A chip, not a banner. A banner across the top would push the
+            composer down and take writing space at precisely the moment
+            nothing can be done about the network — the writing still works,
+            only the sending does not.
+          */}
+          {!online ? <OfflineChip compact /> : null}
           <ThemeToggle />
           <button
             type="button"
@@ -154,8 +187,11 @@ export function AppShell({
           {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
               WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
           <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="h-7 w-auto" />
-          <div className="ml-auto md:hidden">
-            <ThemeToggle />
+          <div className="ml-auto flex items-center gap-2">
+            {!online ? <OfflineChip /> : null}
+            <span className="md:hidden">
+              <ThemeToggle />
+            </span>
           </div>
         </header>
 

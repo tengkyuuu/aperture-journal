@@ -50,6 +50,10 @@ export function SecurityPanel({
   const [deleting, setDeleting] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
 
+  // The same UTC day the server's quota window uses.
+  const utcToday = new Date().toISOString().slice(0, 10);
+  const todayCalls = calls.filter((c) => (c.at ?? '').slice(0, 10) === utcToday).length;
+
   const totalIn = calls.reduce((n, c) => n + c.inputTokens, 0);
   const totalOut = calls.reduce((n, c) => n + c.outputTokens, 0);
   const totalCost = calls.reduce((n, c) => n + c.estCostUsd, 0);
@@ -87,7 +91,16 @@ export function SecurityPanel({
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Stat label="Calls" value={String(calls.length)} />
+              {/*
+                "Today" rather than a live "108 of 120 remaining" counter.
+
+                A remaining-quota meter above a journal is hostile — it turns
+                thinking into a budget — and it is the same false-precision
+                mistake the mood ribbon was redesigned to avoid. This is a
+                count of what happened, on the page whose job is showing what
+                happened, derived from rows already loaded.
+              */}
+              <Stat label="Calls" value={String(calls.length)} sub={`${todayCalls} today`} />
               <Stat label="Tokens in" value={totalIn.toLocaleString()} />
               <Stat label="Tokens out" value={totalOut.toLocaleString()} />
               <Stat

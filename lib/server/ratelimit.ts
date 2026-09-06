@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { userDoc } from './db';
 import { RateLimited } from './http';
+import { recordSecurityEvent } from './ledger';
 import { LIMITS } from '../config';
 import { log, uidTag } from './logger';
 
@@ -31,7 +32,18 @@ export async function consumeQuota(uid: string, estimatedTokens: number): Promis
   const ref = userDoc(uid);
   const today = utcDay();
 
-  await ref.firestore.runTransaction(async (tx) => {
+  /**
+   * Which limit was hit, captured for the security event.
+   *
+   * It has to live out here. The throw happens inside a transaction, and a
+   * transaction body can be retried or discarded — so a write issued from
+   * inside it is not a reliable record of anything. Recorded at the boundary
+   * below instead, then rethrown.
+   */
+  let hit: 'calls' | 'tokens' | null = null;
+
+  try {
+    await ref.firestore.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const quota = (snap.get('quota') ?? {}) as {
       day?: string;
@@ -44,6 +56,7 @@ export async function consumeQuota(uid: string, estimatedTokens: number): Promis
     const tokens = fresh ? 0 : (quota.tokens ?? 0);
 
     if (calls + 1 > LIMITS.dailyChatCalls) {
+      hit = 'calls';
       log.warn('quota_exceeded', {
         uidHash: uidTag(uid),
         reason: 'calls',
@@ -53,6 +66,7 @@ export async function consumeQuota(uid: string, estimatedTokens: number): Promis
       throw new RateLimited();
     }
     if (tokens + estimatedTokens > LIMITS.dailyTokens) {
+      hit = 'tokens';
       log.warn('quota_exceeded', {
         uidHash: uidTag(uid),
         reason: 'tokens',
@@ -62,12 +76,33 @@ export async function consumeQuota(uid: string, estimatedTokens: number): Promis
       throw new RateLimited();
     }
 
-    tx.set(
-      ref,
-      { quota: { day: today, chatCalls: calls + 1, tokens: tokens + estimatedTokens } },
-      { merge: true },
-    );
-  });
+      tx.set(
+        ref,
+        { quota: { day: today, chatCalls: calls + 1, tokens: tokens + estimatedTokens } },
+        { merge: true },
+      );
+    });
+  } catch (err) {
+    // The Security page states that rate-limit hits show up in its events
+    // list. Until now nothing ever wrote one — the limit was only ever
+    // log.warn'd, so the UI asserted an auditing guarantee the server did not
+    // implement. In an app whose entire pitch is verifiable transparency, that
+    // is the wrong half of the pair to leave unbuilt.
+    //
+    // 'low' severity on purpose: this is a limit working as designed, not an
+    // attack. It belongs in the user's own record, not flagged as a threat.
+    if (err instanceof RateLimited && hit) {
+      await recordSecurityEvent(
+        uid,
+        'rate_limited',
+        'low',
+        hit === 'calls'
+          ? `Daily call limit reached (${LIMITS.dailyChatCalls}).`
+          : `Daily token limit reached (${LIMITS.dailyTokens.toLocaleString('en-GB')}).`,
+      );
+    }
+    throw err;
+  }
 }
 
 /**

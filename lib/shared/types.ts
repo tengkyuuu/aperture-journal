@@ -138,7 +138,7 @@ export interface AiCall {
   at: string | null;
   route: string;
   model: string;
-  purpose: 'chat' | 'summarize' | 'embed' | 'ask';
+  purpose: 'chat' | 'summarize' | 'embed' | 'ask' | 'echo';
   inputTokens: number;
   outputTokens: number;
   estCostUsd: number;
