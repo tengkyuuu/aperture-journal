@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { decrypt, encrypt } from '@/lib/client/vault';
-import { apiPost } from '@/lib/client/api';
+import { apiFetch, apiPost } from '@/lib/client/api';
 import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
 import { Notice } from '@/components/feedback/notice';
 import { toast } from '@/components/feedback/toaster';
@@ -83,12 +83,23 @@ export function Canvas({
   const [decrypted, setDecrypted] = useState(false);
 
   const sessionId = useRef<string | undefined>(initialSessionId);
+  /**
+   * The in-flight generation, so it can be stopped.
+   *
+   * The server has always forwarded req.signal into Gemini and implemented
+   * cancel() on the stream — it was ready to be interrupted and nothing on
+   * this side ever did it. Also fixes a real leak: navigating away mid-stream
+   * left the reader loop running and calling setTurns on an unmounted tree.
+   */
+  const abort = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   const sealAfterUnlock = useRef(false);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [turns.length, ritual]);
+
+  useEffect(() => () => abort.current?.abort(), []);
 
   // ── Reading a sealed session ────────────────────────────────────────────
   // Decryption happens here, in the browser, with a key the server has never
@@ -157,11 +168,15 @@ export function Canvas({
       { id: `m-${stamp}`, role: 'model', content: '', cipher: null, sealed: false },
     ]);
 
+    abort.current?.abort();
+    const ctrl = new AbortController();
+    abort.current = ctrl;
+
     try {
-      const res = await apiPost('/api/chat', {
-        message,
-        mode,
-        sessionId: sessionId.current,
+      const res = await apiFetch('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message, mode, sessionId: sessionId.current }),
+        signal: ctrl.signal,
       });
 
       if (!res.ok || !res.body) {
@@ -199,6 +214,10 @@ export function Canvas({
         router.refresh();
       }
     } catch (err) {
+      // The user pressed stop, or walked away. Not an error, and not something
+      // to put the writing back for — the server kept the partial reply.
+      if (failureFromThrown(err).kind === 'aborted') return;
+
       if (phase === 'request') {
         // Nothing reached the server. Give the writing back.
         setFailure(failureFromThrown(err));
@@ -217,6 +236,10 @@ export function Canvas({
     } finally {
       setStreaming(false);
     }
+  }
+
+  function stop() {
+    abort.current?.abort();
   }
 
   // ── The Closing Ritual ──────────────────────────────────────────────────
@@ -387,6 +410,7 @@ export function Canvas({
           onModeChange={setMode}
           busy={streaming}
           disabled={streaming}
+          onStop={stop}
           placeholder={placeholder}
           canEnd={canEnd}
           onEnd={endSession}

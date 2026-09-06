@@ -36,6 +36,7 @@ export function Composer({
   placeholder,
   canEnd,
   onEnd,
+  onStop,
   echoArmed,
 }: {
   value: string;
@@ -48,6 +49,8 @@ export function Composer({
   placeholder?: string;
   canEnd?: boolean;
   onEnd?: () => void;
+  /** Abort the generation in flight. Only meaningful while `busy`. */
+  onStop?: () => void;
   /** Echoes is on and watching this draft. Never run it without saying so. */
   echoArmed?: boolean;
 }) {
@@ -129,15 +132,36 @@ export function Composer({
           aria-label="Your entry"
           className="prose-journal max-h-80 min-h-[3.5rem] w-full flex-1 resize-none bg-transparent px-3 py-2 outline-none placeholder:text-[15px] placeholder:text-ink-3 disabled:opacity-50"
         />
-        <button
-          type="button"
-          onClick={onSend}
-          disabled={disabled || busy || !value.trim()}
-          aria-label="Send"
-          className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-accent text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] transition-[transform,box-shadow,opacity] duration-100 disabled:pointer-events-none disabled:opacity-30"
-        >
-          {busy ? <PixelLoader size="sm" tone="current" /> : <IconSend />}
-        </button>
+        {/*
+          While streaming, this is a STOP button rather than a disabled send.
+
+          The loader comes off it deliberately: a control cannot be both the
+          affordance and the progress indicator, and the blinking caret in the
+          reply already says a reply is arriving. The glyph is a filled square
+          — already this system's bullet, its message marker and its loader
+          block, so it needs no explaining.
+        */}
+        {busy && onStop ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="Stop generating"
+            title="Stop generating"
+            className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-danger text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)] transition-[transform,box-shadow] duration-100"
+          >
+            <span aria-hidden className="size-3 bg-[#111111]" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={disabled || busy || !value.trim()}
+            aria-label="Send"
+            className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-accent text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] transition-[transform,box-shadow,opacity] duration-100 disabled:pointer-events-none disabled:opacity-30"
+          >
+            {busy ? <PixelLoader size="sm" tone="current" /> : <IconSend />}
+          </button>
+        )}
       </div>
 
       <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-ink-3">

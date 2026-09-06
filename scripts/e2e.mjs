@@ -410,6 +410,47 @@ try {
     bad('bob opt-in', String(bobOptIn.status));
   }
 
+  // ── Stopping a generation ────────────────────────────────────────────────
+  // The server forwards req.signal into Gemini and implements cancel(), so a
+  // stopped answer really does stop. The risk is the accounting: all of it used
+  // to live in the `done` branch, so aborting skipped the ledger row entirely —
+  // a call that reached Gemini and spent tokens, with no record. The Security
+  // page promises every such call is recorded, so this asserts it.
+  section('Stopping a generation');
+  await pace();
+  {
+    const before = (await db.collection(`users/${UIDS.alice}/ai_calls`).get()).size;
+
+    const ctrl = new AbortController();
+    let aborted = false;
+    try {
+      const res = await fetch(`${BASE}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: aliceCookie, Origin: BASE },
+        body: JSON.stringify({ message: 'Tell me at length about the sea.', mode: 'reflect', sessionId }),
+        signal: ctrl.signal,
+      });
+      const reader = res.body.getReader();
+      await reader.read();          // wait for the first chunk, so it really started
+      ctrl.abort();                 // then stop it, the way the button does
+      aborted = true;
+      await reader.read().catch(() => {});
+    } catch {
+      aborted = true;
+    }
+    aborted ? ok('stream aborted mid-answer') : bad('abort', 'never aborted');
+
+    // finish('stopped') runs after cancel(), so give it a moment to land.
+    let after = before;
+    for (let i = 0; i < 20 && after <= before; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      after = (await db.collection(`users/${UIDS.alice}/ai_calls`).get()).size;
+    }
+    after > before
+      ? ok('stopped call still ledgered', `${before} to ${after} rows — the record survives the stop`)
+      : bad('LEDGER GAP', 'a stopped call reached Gemini and left no row');
+  }
+
   // ── Privacy Ledger ───────────────────────────────────────────────────────
   section('Privacy Ledger');
   const calls = await db.collection(`users/${UIDS.alice}/ai_calls`).get();

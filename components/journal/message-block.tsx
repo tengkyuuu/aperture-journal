@@ -55,7 +55,15 @@ export function MessageBlock({
   }
 
   return (
-    <article className="relative pl-5">
+    <article
+      className="relative pl-5"
+      // Announced only WHILE streaming. A permanently live region over a
+      // forty-turn transcript would re-announce the whole history on every
+      // render; without one at all, the model's reply — the thing the person
+      // is waiting for — arrived completely silently.
+      aria-live={streaming ? 'polite' : undefined}
+      aria-busy={streaming || undefined}
+    >
       {/* A solid ink rule and a square marker. The old hairline-and-dot was
           the previous system's whisper; this system does not whisper. */}
       <span aria-hidden className="absolute left-0 top-[0.7em] bottom-[0.4em] w-[3px] bg-accent" />

@@ -114,53 +114,87 @@ export async function POST(req: Request) {
     const encoder = new TextEncoder();
     let full = '';
 
+    /**
+     * Persist the model turn and close out the accounting.
+     *
+     * ── WHY THIS IS NOT INLINE IN `done` ANY MORE ──
+     * All of it used to live in the done branch, so aborting the request ran
+     * none of it: the user's turn was already on disk (it is written before
+     * the first token), but the model turn, the messageCount, the quota
+     * settlement and — worst — the LEDGER ROW were all skipped. That call
+     * reached Gemini and spent tokens. A stopped generation that leaves no
+     * ledger row would quietly falsify the claim the Security page makes in
+     * writing: "every call this app makes to Gemini on your behalf is
+     * recorded here." So `cancel()` calls this too.
+     */
+    let settled = false;
+    async function finish(reason: 'complete' | 'stopped') {
+      if (settled) return;
+      settled = true;
+
+      const latencyMs = Date.now() - startedAt;
+
+      // The generator resolves `usage`. If it was returned early that may
+      // never happen, so do not wait on it indefinitely — an ESTIMATED ledger
+      // row is honest, a missing one is not.
+      const counted = await Promise.race([
+        usage,
+        new Promise<null>((r) => setTimeout(() => r(null), 2_000)),
+      ]).catch(() => null);
+
+      const inputTokens = counted?.inputTokens ?? estimateTokens(body.message);
+      const outputTokens = counted?.outputTokens ?? estimateTokens(full);
+
+      try {
+        // An empty partial is not worth a message document — nothing was said.
+        const kept = full.trim().length > 0;
+        if (kept) {
+          await messagesCol(uid, sessionId).add({
+            role: 'model',
+            content: full,
+            sealed: false,
+            ...(reason === 'stopped' ? { stopped: true } : {}),
+            createdAt: FieldValue.serverTimestamp(),
+          });
+        }
+        await sessionDoc(uid, sessionId).set(
+          { messageCount: FieldValue.increment(kept ? 2 : 1), mode: body.mode },
+          { merge: true },
+        );
+        await recordAiCall(uid, {
+          route: '/api/chat',
+          model,
+          purpose: 'chat',
+          inputTokens,
+          outputTokens,
+          latencyMs,
+          dataClasses: ['session_messages'],
+          sealedExcluded: prior.docs.filter((d) => d.get('sealed') === true).length,
+          sessionId,
+        });
+        await settleQuota(uid, inputTokens + outputTokens, estimate);
+      } catch {
+        log.error('post_stream_persist_failed', { route: '/api/chat', sessionId });
+      }
+
+      log.info('chat_turn', {
+        route: '/api/chat',
+        uidHash: uidTag(uid),
+        mode: body.mode,
+        model,
+        inputTokens,
+        outputTokens,
+        durationMs: latencyMs,
+        reason,
+      });
+    }
+
     const out = new ReadableStream<Uint8Array>({
       async pull(controller) {
         const { value, done } = await stream.next();
         if (done) {
           controller.close();
-
-          const { inputTokens, outputTokens } = await usage;
-          const latencyMs = Date.now() - startedAt;
-
-          // Persist the model turn and close out the accounting. Nothing here
-          // can fail the user's response — it has already been delivered.
-          try {
-            await messagesCol(uid, sessionId).add({
-              role: 'model',
-              content: full,
-              sealed: false,
-              createdAt: FieldValue.serverTimestamp(),
-            });
-            await sessionDoc(uid, sessionId).set(
-              { messageCount: FieldValue.increment(2), mode: body.mode },
-              { merge: true },
-            );
-            await recordAiCall(uid, {
-              route: '/api/chat',
-              model,
-              purpose: 'chat',
-              inputTokens,
-              outputTokens,
-              latencyMs,
-              dataClasses: ['session_messages'],
-              sealedExcluded: prior.docs.filter((d) => d.get('sealed') === true).length,
-              sessionId,
-            });
-            await settleQuota(uid, inputTokens + outputTokens, estimate);
-          } catch {
-            log.error('post_stream_persist_failed', { route: '/api/chat', sessionId });
-          }
-
-          log.info('chat_turn', {
-            route: '/api/chat',
-            uidHash: uidTag(uid),
-            mode: body.mode,
-            model,
-            inputTokens,
-            outputTokens,
-            durationMs: latencyMs,
-          });
+          await finish('complete');
           return;
         }
 
@@ -168,7 +202,10 @@ export async function POST(req: Request) {
         controller.enqueue(encoder.encode(value));
       },
       cancel() {
+        // The reader went away — the user pressed stop, or navigated. Close the
+        // generator, then account for what was already spent.
         void stream.return?.(undefined);
+        void finish('stopped');
       },
     });
 

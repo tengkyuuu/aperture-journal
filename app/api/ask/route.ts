@@ -82,46 +82,74 @@ export async function POST(req: Request) {
 
     const encoder = new TextEncoder();
 
+    let answered = '';
+    let settled = false;
+
+    /**
+     * Close out the accounting, whether the answer finished or was stopped.
+     *
+     * The ledger row is the point. A stopped answer still reached Gemini and
+     * still spent tokens, and the Security page promises that every such call
+     * is recorded. Cancelling used to skip this entirely.
+     */
+    async function finish(reason: 'complete' | 'stopped') {
+      if (settled) return;
+      settled = true;
+
+      const latencyMs = Date.now() - startedAt;
+
+      // `usage` may never resolve if the generator was returned early. An
+      // estimated row is honest; a missing one is not.
+      const counted = await Promise.race([
+        usage,
+        new Promise<null>((r) => setTimeout(() => r(null), 2_000)),
+      ]).catch(() => null);
+
+      const inputTokens = counted?.inputTokens ?? estimateTokens(question);
+      const outputTokens = counted?.outputTokens ?? estimateTokens(answered);
+
+      try {
+        await recordAiCall(uid, {
+          route: '/api/ask',
+          model,
+          purpose: 'ask',
+          inputTokens,
+          outputTokens,
+          latencyMs,
+          dataClasses: ['summary_only'],
+          sealedExcluded: 0,
+        });
+        await settleQuota(uid, inputTokens + outputTokens, estimate);
+      } catch {
+        log.error('ask_ledger_failed', { route: '/api/ask' });
+      }
+
+      log.info('ask_answered', {
+        route: '/api/ask',
+        uidHash: uidTag(uid),
+        model,
+        inputTokens,
+        outputTokens,
+        durationMs: latencyMs,
+        count: entries.length,
+        reason,
+      });
+    }
+
     const out = new ReadableStream<Uint8Array>({
       async pull(controller) {
         const { value, done } = await stream.next();
         if (done) {
           controller.close();
-
-          const { inputTokens, outputTokens } = await usage;
-          const latencyMs = Date.now() - startedAt;
-
-          try {
-            await recordAiCall(uid, {
-              route: '/api/ask',
-              model,
-              purpose: 'ask',
-              inputTokens,
-              outputTokens,
-              latencyMs,
-              dataClasses: ['summary_only'],
-              sealedExcluded: 0,
-            });
-            await settleQuota(uid, inputTokens + outputTokens, estimate);
-          } catch {
-            log.error('ask_ledger_failed', { route: '/api/ask' });
-          }
-
-          log.info('ask_answered', {
-            route: '/api/ask',
-            uidHash: uidTag(uid),
-            model,
-            inputTokens,
-            outputTokens,
-            durationMs: latencyMs,
-            count: entries.length,
-          });
+          await finish('complete');
           return;
         }
+        answered += value;
         controller.enqueue(encoder.encode(value));
       },
       cancel() {
         void stream.return?.(undefined);
+        void finish('stopped');
       },
     });
 

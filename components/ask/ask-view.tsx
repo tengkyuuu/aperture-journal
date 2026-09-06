@@ -1,11 +1,11 @@
 'use client';
 
-import { Fragment, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import { IconAsk } from '@/components/shell/icons';
 import { PixelLoader } from '@/components/shell/pixel-loader';
-import { apiPost } from '@/lib/client/api';
+import { apiFetch } from '@/lib/client/api';
 import { failureFrom, failureFromThrown, type Failure } from '@/lib/client/errors';
 import { Notice } from '@/components/feedback/notice';
 
@@ -37,12 +37,21 @@ export function AskView() {
   const [citations, setCitations] = useState<Citation[]>([]);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const abort = useRef<AbortController | null>(null);
   const [asked, setAsked] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Abort on unmount: navigating away mid-answer used to leave the reader loop
+  // running and calling setAnswer on an unmounted component.
+  useEffect(() => () => abort.current?.abort(), []);
 
   async function ask(q: string) {
     const text = q.trim();
     if (!text || busy) return;
+
+    abort.current?.abort();
+    const ctrl = new AbortController();
+    abort.current = ctrl;
 
     setBusy(true);
     setFailure(null);
@@ -51,7 +60,11 @@ export function AskView() {
     setAsked(text);
 
     try {
-      const res = await apiPost('/api/ask', { question: text });
+      const res = await apiFetch('/api/ask', {
+        method: 'POST',
+        body: JSON.stringify({ question: text }),
+        signal: ctrl.signal,
+      });
 
       if (!res.ok || !res.body) {
         // The 422 case carries the server's own sentence — an empty corpus is
@@ -77,7 +90,8 @@ export function AskView() {
         setAnswer((a) => a + decoder.decode(value, { stream: true }));
       }
     } catch (err) {
-      setFailure(failureFromThrown(err));
+      // Stopping is not failing.
+      if (failureFromThrown(err).kind !== 'aborted') setFailure(failureFromThrown(err));
     } finally {
       setBusy(false);
     }
