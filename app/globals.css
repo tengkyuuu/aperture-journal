@@ -279,25 +279,47 @@
    * exactly the shadow offset until the shadow is gone. Because the travel
    * equals the offset, the element lands precisely where its shadow was — it
    * reads as a physical key bottoming out rather than a div moving.
+   *
+   * Three rules from the animation review shaped this:
+   *
+   *  · ASYMMETRIC. Press is 60ms because it is confirming the user's own
+   *    action and must feel instantaneous; the return is 140ms because that is
+   *    the key settling, not the user doing something. Symmetric timing on a
+   *    press-and-release reads as a div easing, not a key travelling.
+   *
+   *  · NAMED PROPERTIES, never `transition: all`. Unbounded property animation
+   *    catches layout and paint properties nobody intended to animate.
+   *
+   *  · HOVER IS GATED behind a real hover capability. On touch, `:hover` sticks
+   *    after the tap and the button sits there looking pressed until you touch
+   *    something else.
    */
-  .brut-press {
+  .brut-press,
+  .brut-press-sm {
     transition:
-      transform 120ms var(--ease-spring),
-      box-shadow 120ms var(--ease-spring);
+      transform 140ms var(--ease-spring),
+      box-shadow 140ms var(--ease-spring);
     cursor: pointer;
   }
-  .brut-press:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0 0 var(--border-ink);
+
+  @media (hover: hover) and (pointer: fine) {
+    .brut-press:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 0 var(--border-ink);
+    }
+    .brut-press-sm:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 0 var(--border-ink);
+    }
+  }
+
+  .brut-press:active,
+  .brut-press-sm:active {
+    transition-duration: 60ms;
   }
   .brut-press:active {
     transform: translate(4px, 4px);
     box-shadow: 0 0 0 0 var(--border-ink);
-  }
-
-  .brut-press-sm:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 4px 4px 0 0 var(--border-ink);
   }
   .brut-press-sm:active {
     transform: translate(3px, 3px);
@@ -464,7 +486,13 @@
     animation: shake-hard 0.4s linear both;
   }
 
-  /* Retained so the seal ceremony's blur still works. */
+  /*
+   * Blur is NOT a compositor-cheap property, and animating it would be a
+   * performance finding on anything frequent. It survives here because sealing
+   * is rare, deliberate, and irreversible — the one place in this app where a
+   * heavier effect earns its cost. It is also short, and nothing else is
+   * animating while it runs.
+   */
   @keyframes seal-blur {
     from {
       filter: blur(0);

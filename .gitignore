@@ -51,3 +51,6 @@ ui-debug.log
 *.json.key
 service-account*.json
 gcp-key*.json
+
+# third-party agent skills — tooling, not project source
+.agents/

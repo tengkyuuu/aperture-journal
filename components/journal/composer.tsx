@@ -82,7 +82,7 @@ export function Composer({
               onClick={() => onModeChange(m)}
               aria-pressed={on}
               title={MODE_HINTS[m]}
-              className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-all duration-100 ${
+              className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-[transform,box-shadow,background-color] duration-100 ${
                 on
                   ? // Held down: flush with the page, shadow gone, filled.
                     'translate-x-[3px] translate-y-[3px] bg-accent text-on-accent shadow-none'
@@ -131,7 +131,7 @@ export function Composer({
           onClick={onSend}
           disabled={disabled || busy || !value.trim()}
           aria-label="Send"
-          className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-accent text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] transition-all duration-100 disabled:pointer-events-none disabled:opacity-30"
+          className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-accent text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] transition-[transform,box-shadow,opacity] duration-100 disabled:pointer-events-none disabled:opacity-30"
         >
           {busy ? <PixelLoader size="sm" tone="current" /> : <IconSend />}
         </button>

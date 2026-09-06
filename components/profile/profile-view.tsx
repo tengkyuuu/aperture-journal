@@ -170,7 +170,7 @@ export function ProfileView({
                     const ok = await save({ defaultMode: m }, 'mode');
                     if (!ok) setDefaultMode(prev);
                   }}
-                  className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-all duration-100 ${
+                  className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-[transform,box-shadow,background-color] duration-100 ${
                     on
                       ? 'translate-x-[3px] translate-y-[3px] bg-accent text-on-accent shadow-none'
                       : 'brut-press-sm bg-surface text-ink shadow-[3px_3px_0_0_var(--border-ink)]'

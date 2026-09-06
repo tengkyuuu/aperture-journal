@@ -139,10 +139,13 @@ export function VaultGate({
 
           {setup && passphrase ? (
             <div className="flex items-center gap-2.5">
-              <div className="h-1 flex-1 overflow-hidden rounded-full bg-sunken">
+              {/* scaleX, not width. Animating width is a layout property —
+                  it forces reflow on every frame, and this runs while someone
+                  is typing, which is the worst possible moment for it. */}
+              <div className="h-1.5 flex-1 overflow-hidden border-2 border-line bg-sunken">
                 <div
-                  className={`h-full ${barColor} transition-all duration-200`}
-                  style={{ width: `${(verdict.score / 3) * 100}%` }}
+                  className={`h-full w-full origin-left ${barColor} transition-transform duration-200 ease-out`}
+                  style={{ transform: `scaleX(${verdict.score / 3})` }}
                 />
               </div>
               <span className="w-24 shrink-0 text-right text-[11px] text-ink-3">

@@ -97,7 +97,11 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
       onClick={(e) => {
         if (e.target === dialogRef.current) close();
       }}
-      className="m-0 w-full max-w-lg rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[12vh]"
+      // No entrance animation, deliberately. This opens on ⌘K, many times a
+      // day, and animating a keyboard-initiated surface puts a delay between
+      // the keystroke and the thing the user is already typing into. The
+      // palette should simply BE there.
+      className="m-0 w-full max-w-lg rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] sm:mx-auto sm:mt-[12vh]"
     >
       <div className="border-b-[3px] border-line px-4">
         <input
