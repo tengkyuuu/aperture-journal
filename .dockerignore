@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.firebase
+docs
+scripts
+tests
+*.log
+.env.local
+.env*.local
+firestore-debug.log

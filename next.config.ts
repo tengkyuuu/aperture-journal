@@ -13,6 +13,9 @@ import type { NextConfig } from 'next';
  */
 
 const nextConfig: NextConfig = {
+  // Ships only the files the server actually imports, so the Cloud Run image
+  // carries a runtime rather than a workspace.
+  output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
 
