@@ -91,9 +91,11 @@ export function AppShell({
         <Link
           href="/today"
           aria-label="Aperture — home"
-          className="mb-3 grid size-9 place-items-center rounded-full border-2 border-line font-serif text-[15px] leading-none"
+          className="brut-press-sm mb-3 grid size-10 place-items-center rounded-card border-2 border-line bg-surface shadow-[2px_2px_0_0_var(--border-ink)]"
         >
-          A
+          {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
+              WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
+          <img src="/logo-sm.webp" alt="" width={1269} height={1092} className="w-8" />
         </Link>
 
         <nav aria-label="Main" className="flex flex-col items-center gap-1">
@@ -147,7 +149,9 @@ export function AppShell({
           >
             <IconMenu />
           </button>
-          <span className="font-serif text-[17px]">Aperture</span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
+              WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
+          <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="h-7 w-auto" />
           <div className="ml-auto md:hidden">
             <ThemeToggle />
           </div>
@@ -200,7 +204,9 @@ export function AppShell({
           />
           <div className="absolute inset-y-0 left-0 flex w-[min(320px,85vw)] flex-col border-r-[3px] border-line bg-surface animate-rise-in">
             <div className="flex items-center justify-between border-b-[3px] border-line px-4 py-3">
-              <span className="font-serif text-[16px]">Aperture</span>
+              {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
+                  WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
+              <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="h-6 w-auto" />
               <button
                 type="button"
                 onClick={() => setSheetOpen(false)}

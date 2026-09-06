@@ -50,8 +50,23 @@ export default function SignInPage() {
       </div>
 
       <div className="w-full max-w-md">
-        <div className="tilt-l mb-6 inline-block">
-          <span className="chip-brut bg-pop">Aperture</span>
+        {/*
+          The logo is a glossy 3D render, which is the opposite of everything
+          else here — flat fills, hard borders, zero-blur shadows. Rather than
+          pretend otherwise, it is pasted into a bordered tile and tilted, so it
+          reads as a sticker stuck onto the paper. Collage is already part of
+          this idiom; an unframed gradient floating on cream would not be.
+        */}
+        <div className="tilt-l mb-7 inline-block rounded-card border-[3px] border-line bg-surface px-4 py-3 shadow-[var(--shadow-brut)]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
+              WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
+          <img
+            src="/logo.webp"
+            alt="Aperture"
+            width={1269}
+            height={1092}
+            className="block h-24 w-auto"
+          />
         </div>
 
         <h1 className="text-[46px] font-bold leading-[0.95] tracking-[-0.03em] text-ink sm:text-[58px]">

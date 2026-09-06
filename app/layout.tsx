@@ -41,6 +41,13 @@ export const metadata: Metadata = {
   title: 'Aperture',
   description: 'A private place to think.',
   robots: { index: false, follow: false },
+  // The tab and home-screen icons come from app/icon.png and app/apple-icon.png
+  // by convention. This is only for when someone pastes the link somewhere.
+  openGraph: {
+    title: 'Aperture',
+    description: 'A private place to think.',
+    images: [{ url: '/logo.webp', width: 640, height: 551, alt: 'Aperture' }],
+  },
 };
 
 export const viewport: Viewport = {
