@@ -11,7 +11,7 @@ list named requirements the original brief did not — read this before submitti
 |---|---|---|
 | 1 | Cloud Run app live and publicly accessible | ✅ **Done** |
 | 2 | Service labelled `dev-tutorial=cloud-run-ai-challenge` | ✅ **Done** |
-| 3 | Repo public, with `README.md` and Firestore rules | ⛔ **BLOCKED — needs you** |
+| 3 | Repo public, with `README.md` and Firestore rules | ✅ **Done** |
 | 4 | Social post live with `#AccelerateAIwithCloudRun` | ⛔ **Needs you** |
 | 5 | Every mandatory field in the Prototype Submission tab | ⛔ **Needs you** |
 
@@ -64,40 +64,45 @@ localhost approximation.
 
 ---
 
-## 3 — Public repo ⛔ **This is the blocker**
+## 3 — Public repo ✅
 
-**There is no git remote.** Twelve commits exist only on this laptop. The repo has
-`README.md` and `firestore.rules` at the root, so the content requirement is met —
-it just is not published anywhere.
+**https://github.com/tengkyuuu/aperture-journal** — public, default branch `main`.
 
-`gh` is not installed, so this needs you. Either:
-
-**With the GitHub CLI**
-```bash
-winget install GitHub.cli
-gh auth login
-gh repo create aperture-journal --public --source=. --remote=origin --push
 ```
-
-**Or by hand** — create an empty public repo at github.com/new, then:
-```bash
-git remote add origin https://github.com/<you>/aperture-journal.git
-git push -u origin master
-```
-
-> Note the branch is **`master`**, not `main`. If the form or a reviewer expects
-> `main`: `git branch -M main` before pushing.
-
-### Before you push
-
-```bash
-npm run verify:no-secrets -- --history
+$ npm run verify:no-secrets -- --history
+✓ Clean. Scanned 36 bundle files under .next/static.
+✓ Git history clean across 15 commits.
 ```
 
 It scans **every commit**, not just the working tree — a key committed once and
-deleted later is still published. Last run: clean across 12 commits, with the
-only key-shaped string being the public Firebase web config value, which belongs
-in the bundle.
+deleted later is still published. The only key-shaped string is the public
+Firebase web config value, which belongs in the bundle.
+
+`README.md` and `firestore.rules` are both at the repo root.
+
+---
+
+## Redeploying
+
+The deploy was originally run by hand and the command was written down nowhere,
+which meant reconstructing it from the live service the next time it was needed.
+It is now `scripts/deploy.sh`:
+
+```bash
+bash scripts/deploy.sh
+```
+
+It reads the public Firebase config from `.env.local`, because `NEXT_PUBLIC_*`
+values are inlined into the client bundle at **build** time and therefore have
+to be passed as Docker build args — `gcloud run deploy --source` cannot pass
+them, and `.env.local` is dockerignored on purpose. That is why `cloudbuild.yaml`
+exists rather than a one-line deploy.
+
+It also re-applies `dev-tutorial=cloud-run-ai-challenge` on every deploy, so a
+later revision cannot silently drop the label the checklist requires.
+
+The Gemini key is never a build arg. It stays in Secret Manager and is fetched
+at runtime.
 
 ---
 

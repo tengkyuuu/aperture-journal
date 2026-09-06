@@ -9,3 +9,4 @@ tests
 .env.local
 .env*.local
 firestore-debug.log
+assets

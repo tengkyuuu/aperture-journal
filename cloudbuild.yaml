@@ -1,0 +1,23 @@
+# Build for Cloud Run.
+#
+# NEXT_PUBLIC_* values are inlined into the client bundle at BUILD time, so they
+# have to be passed as build args — `gcloud run deploy --source` cannot pass
+# them, and .env.local is dockerignored on purpose. That is the whole reason
+# this file exists rather than a one-line deploy.
+#
+# These three are public config: they identify the Firebase project, they do not
+# authorise anything. Firestore rules are what protect the data. The Gemini key
+# is NOT here — it stays in Secret Manager and is fetched at runtime.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=${_FIREBASE_API_KEY}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID}
+      - -t=${_IMAGE}
+      - .
+images:
+  - ${_IMAGE}
+options:
+  logging: CLOUD_LOGGING_ONLY
