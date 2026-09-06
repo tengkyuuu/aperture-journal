@@ -187,7 +187,22 @@
   --radius-sheet: 8px;
 
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /*
+   * Exponential ease-out. Decelerates hard and STOPS — no overshoot.
+   * This is the default for anything that comes to rest against a stop.
+   */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /*
+   * Overshoot, reserved for ONE thing: the stamp.
+   *
+   * The design audit flags bounce easing as dated, and on almost everything it
+   * is right — a key bottoming out against its own shadow must not spring past
+   * the stop, because real keys do not. It stays only where the physics call
+   * for it: a rubber stamp pressed by hand genuinely rebounds off the paper.
+   */
+  --ease-rebound: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────── */
@@ -297,8 +312,8 @@
   .brut-press,
   .brut-press-sm {
     transition:
-      transform 140ms var(--ease-spring),
-      box-shadow 140ms var(--ease-spring);
+      transform 140ms var(--ease-out-expo),
+      box-shadow 140ms var(--ease-out-expo);
     cursor: pointer;
   }
 
@@ -468,10 +483,10 @@
     animation: pixel-march 0.9s steps(3, end) infinite;
   }
   .animate-rise-in {
-    animation: rise-in 0.28s var(--ease-spring) both;
+    animation: rise-in 0.28s var(--ease-out-expo) both;
   }
   .animate-pop-in {
-    animation: pop-in 0.32s var(--ease-spring) both;
+    animation: pop-in 0.32s var(--ease-out-expo) both;
   }
   .animate-fade-in {
     animation: fade-in 0.2s linear both;
@@ -480,7 +495,7 @@
     animation: caret-blink 1s steps(1, end) infinite;
   }
   .animate-stamp {
-    animation: stamp-slam 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+    animation: stamp-slam 0.55s var(--ease-rebound) both;
   }
   .animate-shake {
     animation: shake-hard 0.4s linear both;
@@ -507,13 +522,15 @@
     animation: seal-blur 0.4s linear both;
   }
 
-  /* Pixel-grid texture, for empty states and the sign-in ground. */
-  .pixel-grid {
-    background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--border-ink) 8%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--border-ink) 8%, transparent) 1px, transparent 1px);
-    background-size: 8px 8px;
-  }
+  /*
+   * REMOVED: the decorative pixel-grid ground.
+   *
+   * A tiled hairline grid is a recurring generated-UI signature, and it was the
+   * least earned pixel in this design — the loader, the weather columns and
+   * Silkscreen at 10px all do a job, and this one only made texture. The
+   * sign-in page carries itself on the type, the colour block and the stamped
+   * cards. Grid overlays belong on canvases, maps and blueprints.
+   */
 }
 
 /*

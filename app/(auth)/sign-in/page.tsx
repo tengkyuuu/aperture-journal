@@ -15,8 +15,9 @@ import { PixelLoader } from '@/components/shell/pixel-loader';
  * bordered block with a hard shadow IS the emphasis. No gradient hero, no
  * feature grid, no screenshots.
  *
- * The pixel grid behind everything is the only texture in the app; it sets the
- * medium before a single word is read.
+ * No decorative ground. A tiled grid behind a hero is a generated-UI tell, and
+ * this page does not need one — the type, the colour block and the stamped
+ * cards carry it.
  */
 export default function SignInPage() {
   const router = useRouter();
@@ -44,8 +45,6 @@ export default function SignInPage() {
 
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden px-6 py-12">
-      <div aria-hidden className="pixel-grid pointer-events-none absolute inset-0 -z-10" />
-
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
