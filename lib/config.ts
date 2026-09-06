@@ -80,6 +80,17 @@ export const LIMITS = {
   maxOutputTokens: 1200,
   maxMessageChars: 8_000,
   maxTurnsPerRequest: 40,
+  /**
+   * How many messages of one session are loaded at once.
+   *
+   * ONE number, used by the read AND by the seal schema, deliberately. They
+   * used to disagree — the query returned 200 while SealRequestSchema accepted
+   * 400 — and a session between those bounds could be sealed from a client
+   * that had only ever seen part of it. The seal route then deleted the
+   * plaintext of everything it had no ciphertext for. That gap is only
+   * possible while two constants describe one invariant.
+   */
+  maxMessagesPerSession: 200,
   /** Per-user, per-UTC-day. Denial-of-wallet defence. */
   dailyChatCalls: 120,
   dailyTokens: 400_000,

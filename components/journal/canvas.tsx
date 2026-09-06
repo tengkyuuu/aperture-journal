@@ -43,6 +43,7 @@ export function Canvas({
   sealed = false,
   placeholder,
   echoesEnabled = false,
+  truncated = false,
 }: {
   sessionId?: string;
   initialMessages?: StoredMessage[];
@@ -53,6 +54,8 @@ export function Canvas({
   placeholder?: string;
   /** The user's stored Echoes preference. Off unless they turned it on. */
   echoesEnabled?: boolean;
+  /** This session has more messages than were loaded. Sealing is unsafe. */
+  truncated?: boolean;
 }) {
   const router = useRouter();
   const vault = useVault();
@@ -128,6 +131,21 @@ export function Canvas({
     setError(null);
     setStreaming(true);
 
+    /**
+     * Which side of the response a failure happened on.
+     *
+     * It decides whether the writing goes back in the box. Before the headers
+     * arrive nothing was persisted, so the optimistic pair comes out and the
+     * text returns to the composer. Once the stream has started the user's
+     * turn IS in Firestore — /api/chat writes it before the first token — so
+     * putting it back would have them send the same thing twice.
+     *
+     * The catch block used to do neither: it dropped one turn instead of two
+     * and never restored the input, so a dropped connection silently ate what
+     * the person had just written and then told them to try again.
+     */
+    let phase: 'request' | 'stream' = 'request';
+
     const stamp = Date.now();
     setTurns((t) => [
       ...t,
@@ -155,6 +173,9 @@ export function Canvas({
         return;
       }
 
+      // Past this point the server has the user's turn on disk.
+      phase = 'stream';
+
       const returnedId = res.headers.get('X-Session-Id');
       const isNew = !sessionId.current && returnedId;
       if (returnedId) sessionId.current = returnedId;
@@ -180,8 +201,21 @@ export function Canvas({
         router.refresh();
       }
     } catch {
-      setError('Connection lost mid-thought. Try again.');
-      setTurns((t) => t.slice(0, -1));
+      if (phase === 'request') {
+        // Nothing reached the server. Give the writing back.
+        setError('Connection lost before that could be sent. It is back in the box above.');
+        setTurns((t) => t.slice(0, -2));
+        setInput(message);
+      } else {
+        // It was saved; only the reply was cut off. Restoring the composer here
+        // would duplicate the entry, so drop the empty model turn and re-read.
+        setError('The connection dropped mid-reply. Your entry was saved — reload to see where it got to.');
+        setTurns((t) => {
+          const last = t[t.length - 1];
+          return last && last.role === 'model' && last.content === '' ? t.slice(0, -1) : t;
+        });
+        router.refresh();
+      }
     } finally {
       setStreaming(false);
     }
@@ -280,8 +314,17 @@ export function Canvas({
 
   const hasContent = turns.some((t) => !t.sealed && t.content.trim().length > 0);
   const canEnd = Boolean(sessionId.current) && hasContent && ritual === 'idle' && !streaming;
+  // A session longer than the read limit arrives here as a prefix of itself.
+  // Sealing encrypts only what was loaded, and the server would then have to
+  // choose between leaving the rest readable or destroying it. Neither is
+  // acceptable, so the offer is withdrawn and the reason is stated below.
   const canSeal =
-    Boolean(sessionId.current) && hasContent && !sealed && sealState === 'idle' && !streaming;
+    Boolean(sessionId.current) &&
+    hasContent &&
+    !sealed &&
+    !truncated &&
+    sealState === 'idle' &&
+    !streaming;
 
   const showComposer = ritual === 'idle' && !closed && !sealed && sealState === 'idle';
 
@@ -366,6 +409,16 @@ export function Canvas({
           <p className="text-[12px] leading-relaxed text-ink-3">
             Encrypted in this browser. Neither we nor Gemini can read it afterwards — which
             also means no summary, no search, and no mood tracking for it.
+          </p>
+        </div>
+      ) : truncated && !sealed && sealState === 'idle' ? (
+        <div className="flex flex-col gap-2 border-t-[3px] border-line pt-5">
+          <p className="label">Sealing unavailable here</p>
+          <p className="text-[12px] leading-relaxed text-ink-3">
+            This entry is longer than can be loaded at once, so only part of it is on
+            screen. Sealing encrypts what the browser is holding, and doing that here
+            would leave the rest of the entry behind. It stays readable rather than
+            half-sealed.
           </p>
         </div>
       ) : null}

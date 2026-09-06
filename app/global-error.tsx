@@ -31,8 +31,13 @@ export default function GlobalError({
           <h1 style={{ fontSize: '1.5rem', fontWeight: 300, margin: 0 }}>
             Aperture could not start.
           </h1>
+          {/*
+            The root layout failed, so this boundary knows nothing about drafts
+            or about what the composer was holding. Claim less than app/error.tsx
+            deliberately: a boundary that knows less should promise less.
+          */}
           <p style={{ color: '#a9a9b4', fontSize: '0.875rem', lineHeight: 1.6 }}>
-            Nothing you wrote was lost. Reload, and if this keeps happening, quote the
+            Your saved entries are safe. Reload, and if this keeps happening, quote the
             reference below.
           </p>
           <button

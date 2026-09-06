@@ -553,6 +553,42 @@ try {
       : bad('orphans', `${orphans.size} message(s) left behind`);
   }
 
+  // ── Sealing refuses to half-seal ─────────────────────────────────────────
+  // The seal route deletes the plaintext of every message the client did not
+  // send ciphertext for. That is right when the client withheld one on purpose
+  // and catastrophic when it never had it — the message ends up marked sealed
+  // with neither plaintext nor cipher, which is unrecoverable. A session longer
+  // than the read limit used to reach the canvas as a prefix of itself and do
+  // exactly that. This asserts the refusal, and that nothing was touched.
+  section('Sealing');
+  {
+    const sealDoc = db.doc(`users/${UIDS.alice}/sessions/partial-seal-test`);
+    await sealDoc.set({ title: 'Partial', status: 'closed', sealed: false, messageCount: 2 });
+    const mA = sealDoc.collection('messages').doc('m-a');
+    const mB = sealDoc.collection('messages').doc('m-b');
+    await mA.set({ role: 'user', content: 'first half', sealed: false, createdAt: new Date(1) });
+    await mB.set({ role: 'user', content: 'second half', sealed: false, createdAt: new Date(2) });
+
+    // Ciphertext for only ONE of the two readable messages.
+    const res = await call(aliceCookie, '/api/session/seal', {
+      sessionId: 'partial-seal-test',
+      messages: [{ id: 'm-a', cipher: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAA' }],
+    });
+    res.status === 400
+      ? ok('partial seal refused', '400 — a half-sealed session is a destroyed session')
+      : bad('partial seal', `expected 400, got ${res.status}`);
+
+    const [after, other] = await Promise.all([mB.get(), mA.get()]);
+    after.get('content') === 'second half' && after.get('sealed') !== true
+      ? ok('the message with no cipher survived', 'plaintext intact, not marked sealed')
+      : bad('DATA LOSS', 'a message was sealed with neither plaintext nor ciphertext');
+    other.get('content') === 'first half'
+      ? ok('nothing was sealed at all', 'the refusal is atomic')
+      : bad('partial write', 'the supplied message was sealed despite the refusal');
+
+    await db.recursiveDelete(sealDoc);
+  }
+
   // ── Data rights ──────────────────────────────────────────────────────────
   section('Data rights');
   const exp = await fetch(`${BASE}/api/account/export`, { headers: { Cookie: aliceCookie } });

@@ -73,7 +73,11 @@ export const SealRequestSchema = z.strictObject({
       }),
     )
     .min(1)
-    .max(400),
+    // The same bound the read uses. If this were larger, a session between the
+    // two numbers could be sealed by a client that had only ever loaded part
+    // of it, and the route below would delete the plaintext of the rest with
+    // no ciphertext to replace it.
+    .max(LIMITS.maxMessagesPerSession),
 });
 
 export const AskRequestSchema = z.strictObject({

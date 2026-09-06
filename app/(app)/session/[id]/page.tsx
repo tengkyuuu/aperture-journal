@@ -65,6 +65,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         sealed={meta.sealed}
         placeholder="Pick the thread back up…"
         echoesEnabled={profile.settings.echoes}
+        truncated={messages.length < meta.messageCount}
       />
 
       <SessionActions sessionId={meta.id} title={meta.title} sealed={meta.sealed} />

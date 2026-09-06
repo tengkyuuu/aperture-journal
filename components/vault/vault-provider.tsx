@@ -77,10 +77,22 @@ export function VaultProvider({
     };
   }, [state.status, lock]);
 
-  // Esc locks the vault from anywhere.
+  // Esc locks the vault from anywhere — unless something else is using it.
+  //
+  // This is a window listener, and keydown from inside an open <dialog> bubbles
+  // all the way up. So pressing Escape to dismiss the command palette, the
+  // shortcuts sheet or the rename field used to ALSO throw away the vault key,
+  // blanking decrypted text on screen with no explanation and demanding the
+  // passphrase again. "Close this popup" and "discard my decryption key" are
+  // not the same intent and must not share a keystroke.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && state.status === 'unlocked') lock();
+      if (e.key !== 'Escape' || state.status !== 'unlocked') return;
+      if (e.defaultPrevented) return;
+      // Native <dialog> dismissal does not reliably call preventDefault(), so
+      // ask the top layer directly rather than trusting the event.
+      if (document.querySelector('dialog[open]')) return;
+      lock();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

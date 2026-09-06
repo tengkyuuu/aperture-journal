@@ -3,7 +3,7 @@ import 'server-only';
 import { Timestamp, type DocumentData } from 'firebase-admin/firestore';
 
 import { aiCallsCol, messagesCol, securityEventsCol, sessionDoc, sessionsCol, userDoc } from './db';
-import type { ConversationMode } from '../config';
+import { LIMITS, type ConversationMode } from '../config';
 import type {
   AiCall,
   Insights,
@@ -82,7 +82,15 @@ export async function getSessionDetail(
   if (!snap.exists) return null;
 
   const data = snap.data()!;
-  const msgs = await messagesCol(uid, sessionId).orderBy('createdAt', 'asc').limit(200).get();
+  // limitToLast, NOT limit. Ordered ascending, `limit` would return the OLDEST
+  // 200 of a longer session and silently drop the newest — the opposite of
+  // what anyone wants from a journal, and actively dangerous next to sealing,
+  // which deletes the plaintext of every message the client did not send back.
+  // Same reasoning, same shape as app/api/chat/route.ts.
+  const msgs = await messagesCol(uid, sessionId)
+    .orderBy('createdAt', 'asc')
+    .limitToLast(LIMITS.maxMessagesPerSession)
+    .get();
 
   return {
     session: toSessionSummary(snap.id, data),

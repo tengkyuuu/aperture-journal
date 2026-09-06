@@ -52,6 +52,25 @@ export async function POST(req: Request) {
       if (!known.has(m.id)) throw new BadRequest();
     }
 
+    // ── AND EVERY READABLE MESSAGE MUST ARRIVE WITH CIPHERTEXT ───────────────
+    // The loop further down deletes the plaintext of anything the client did
+    // not send a cipher for. That is correct when the client deliberately
+    // withheld one, and catastrophic when the client simply never had it: a
+    // session longer than the read limit used to hand the canvas a prefix of
+    // itself, and sealing it destroyed the remainder outright — marked sealed,
+    // with neither plaintext nor ciphertext, and so unrecoverable.
+    //
+    // The read limit and the schema bound now agree, which closes that door.
+    // This is the bolt on it. Refuse the whole request rather than half-seal:
+    // a half-sealed session is a destroyed session.
+    const supplied = new Set(body.messages.map((m) => m.id));
+    const readable = existing.docs.filter(
+      (d) =>
+        d.get('sealed') !== true &&
+        ((d.get('content') as string | undefined) ?? '').trim().length > 0,
+    );
+    if (readable.some((d) => !supplied.has(d.id))) throw new BadRequest();
+
     const batch = ref.firestore.batch();
 
     for (const m of body.messages) {

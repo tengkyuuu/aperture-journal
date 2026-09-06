@@ -23,8 +23,15 @@ export default function ErrorBoundary({
         <h1 className="mt-3 font-serif text-[30px] font-light leading-tight tracking-tight text-ink">
           That did not load.
         </h1>
+        {/*
+          Claim only what is true. Entries really are written as they are made,
+          but a draft still sitting in the composer when this boundary fires is
+          not one — so the old blanket "nothing you wrote was lost" was a
+          promise the app broke at exactly the moment it mattered.
+        */}
         <p className="prose-journal mt-4 text-ink-2">
-          Nothing you wrote was lost. Entries are saved as they are made.
+          Entries you have already sent are safe — they are saved as they are made. A
+          draft still in the composer may not have survived this.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
