@@ -21,6 +21,7 @@ const DATA_CLASS_COPY: Record<string, string> = {
   single_message: 'one message',
   summary_only: 'session summaries, not raw entries',
   question_only: 'your question only',
+  draft_text: 'an unsent draft, while you were still typing it',
 };
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {

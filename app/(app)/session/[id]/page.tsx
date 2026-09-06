@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Canvas } from '@/components/journal/canvas';
 import { SessionActions } from '@/components/journal/session-actions';
 import { getSession } from '@/lib/server/auth';
-import { getSessionDetail } from '@/lib/server/queries';
+import { getProfile, getSessionDetail } from '@/lib/server/queries';
 import { CLEAR_SESSION_PATH, MODE_LABELS } from '@/lib/config';
 import { longDate, relativeTime } from '@/lib/shared/format';
 
@@ -17,7 +17,10 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   // Scoped to the verified uid. A session id belonging to someone else does not
   // resolve to a document here — it resolves to nothing, and this 404s.
-  const detail = await getSessionDetail(session.uid, id);
+  const [detail, profile] = await Promise.all([
+    getSessionDetail(session.uid, id),
+    getProfile(session.uid),
+  ]);
   if (!detail) notFound();
 
   const { session: meta, insights, messages } = detail;
@@ -61,6 +64,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         closed={meta.status === 'closed'}
         sealed={meta.sealed}
         placeholder="Pick the thread back up…"
+        echoesEnabled={profile.settings.echoes}
       />
 
       <SessionActions sessionId={meta.id} title={meta.title} sealed={meta.sealed} />

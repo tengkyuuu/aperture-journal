@@ -24,6 +24,10 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// Imported rather than duplicated: a test with its own copy of the threshold
+// it is testing will keep passing after the threshold moves.
+import { ECHO } from '../lib/config.ts';
+
 // Port 3200, not 3000 — another project on this machine owns 3000, and a
 // reachability check that silently hits someone else's app is a bad time.
 const BASE = process.env.E2E_BASE ?? 'http://127.0.0.1:3200';
@@ -290,6 +294,120 @@ try {
       : bad('citation markers', 'model did not cite inline');
   } else {
     bad('ask', `${ask.status} ${(await ask.text()).slice(0, 120)}`);
+  }
+
+  // ── Echoes ───────────────────────────────────────────────────────────────
+  // The feature's whole claim is that it cannot run without consent, and that
+  // it never surfaces the wrong thing. Both are asserted here, against the
+  // server — a UI toggle proves nothing.
+  section('Echoes');
+
+  // A draft about the same subject as alice's entry, over the 120-char floor.
+  const DRAFT =
+    'Still turning over the launch. I shipped it but I keep waiting for someone to ' +
+    'say it landed, and the silence is doing something to me that I do not like.';
+
+  const echoOff = await call(aliceCookie, '/api/echo', { draft: DRAFT });
+  echoOff.status === 403
+    ? ok('refused while off', '403 — consent is enforced server-side, not in the UI')
+    : bad('consent gate', `expected 403, got ${echoOff.status}`);
+
+  const optIn = await call(aliceCookie, '/api/account/settings', { echoes: true });
+  optIn.ok ? ok('opted in', 'settings.echoes = true') : bad('opt-in', String(optIn.status));
+
+  // The match exists but was written seconds ago. "You wrote this just now" is
+  // not an insight, so the age floor should suppress it entirely.
+  await pace();
+  const tooRecent = await call(aliceCookie, '/api/echo', { draft: DRAFT });
+  if (tooRecent.ok) {
+    const { echoes } = await tooRecent.json();
+    echoes.length === 0
+      ? ok('recent entry suppressed', "age floor holds — no echo for writing from today")
+      : bad('age floor', `${echoes.length} echo(es) for a session created seconds ago`);
+  } else {
+    bad('echo (recent)', `${tooRecent.status} ${(await tooRecent.text()).slice(0, 120)}`);
+  }
+
+  // Backdate it and the same draft should now find it.
+  await db
+    .doc(`users/${UIDS.alice}/sessions/${sessionId}`)
+    .update({ startedAt: new Date(Date.now() - 30 * 86_400_000) });
+  ok('backdated the entry', '30 days, to clear the 7-day floor');
+
+  await pace();
+  const found = await call(aliceCookie, '/api/echo', { draft: DRAFT });
+  if (found.ok) {
+    const { echoes } = await found.json();
+    if (echoes.length > 0) {
+      const e = echoes[0];
+      ok('echo found', `"${e.title}" at ${e.score}`);
+      e.sessionId === sessionId
+        ? ok('points at the right entry', sessionId)
+        : bad('wrong entry', `got ${e.sessionId}`);
+      e.score >= ECHO.minScore
+        ? ok('above the trust threshold', `${e.score} ≥ ${ECHO.minScore}`)
+        : bad('score', `${e.score} < ${ECHO.minScore}`);
+      e.moodThen?.label
+        ? ok('mood carried through', `you called it "${e.moodThen.label}"`)
+        : bad('mood', 'absent — the delta cannot be described without it');
+    } else {
+      bad('echo', `nothing cleared ${ECHO.minScore} for a draft about the same subject`);
+    }
+  } else {
+    bad('echo', `${found.status} ${(await found.text()).slice(0, 120)}`);
+  }
+
+  // Writing INTO that session must not echo it back at you.
+  await pace();
+  const selfEcho = await call(aliceCookie, '/api/echo', { draft: DRAFT, sessionId });
+  if (selfEcho.ok) {
+    const { echoes } = await selfEcho.json();
+    echoes.every((e) => e.sessionId !== sessionId)
+      ? ok('never echoes the entry you are in', 'self-match excluded')
+      : bad('self-match', 'echoed the session being written');
+  } else {
+    bad('echo (self)', String(selfEcho.status));
+  }
+
+  // Under the character floor it must not reach the model at all.
+  const ledgerBefore = (await db.collection(`users/${UIDS.alice}/ai_calls`).get()).size;
+  const tooShort = await call(aliceCookie, '/api/echo', { draft: 'launch' });
+  if (tooShort.ok) {
+    const { echoes } = await tooShort.json();
+    const ledgerAfter = (await db.collection(`users/${UIDS.alice}/ai_calls`).get()).size;
+    echoes.length === 0 && ledgerAfter === ledgerBefore
+      ? ok('short draft never leaves', 'no echo, no model call, no ledger row')
+      : bad('short draft', `${echoes.length} echo(es), ledger ${ledgerBefore}→${ledgerAfter}`);
+  } else {
+    bad('echo (short)', String(tooShort.status));
+  }
+
+  // The disclosure. If an unsent draft was sent, it is on the record.
+  const draftRows = (await db.collection(`users/${UIDS.alice}/ai_calls`).get()).docs.filter((d) =>
+    (d.get('dataClasses') ?? []).includes('draft_text'),
+  );
+  draftRows.length > 0
+    ? ok('ledgered as draft_text', `${draftRows.length} row(s) — the disclosure cannot be skipped`)
+    : bad('ledger', 'an unsent draft was sent with no draft_text row');
+  draftRows.every((d) => d.get('purpose') === 'echo')
+    ? ok('purpose recorded as echo')
+    : bad('purpose', 'draft_text row logged under the wrong purpose');
+
+  // Bob opts in and gets nothing: the corpus is per-user by construction.
+  const bobOptIn = await call(bobCookie, '/api/account/settings', { echoes: true });
+  if (bobOptIn.ok) {
+    await pace();
+    const bobEcho = await call(bobCookie, '/api/echo', { draft: DRAFT });
+    if (bobEcho.ok) {
+      const { echoes } = await bobEcho.json();
+      echoes.length === 0
+        ? ok("bob's echoes find nothing of alice's", 'empty corpus, not a filtered one')
+        : bad('leak', `bob got ${echoes.length} echo(es) from alice's journal`);
+    } else {
+      bad('echo (bob)', String(bobEcho.status));
+    }
+  } else {
+    bad('bob opt-in', String(bobOptIn.status));
   }
 
   // ── Privacy Ledger ───────────────────────────────────────────────────────

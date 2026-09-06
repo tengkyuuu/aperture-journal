@@ -18,7 +18,8 @@
     "test:e2e": "node scripts/e2e.mjs",
     "seed": "node scripts/seed.mjs",
     "verify:contrast": "node scripts/verify-contrast.mjs",
-    "logo": "node scripts/logo.mjs"
+    "logo": "node scripts/logo.mjs",
+    "calibrate:echo": "node scripts/calibrate-echo.mjs"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^7.0.0",

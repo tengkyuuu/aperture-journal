@@ -140,6 +140,24 @@ export const SettingsSchema = z.strictObject({
   defaultMode: ModeSchema.optional(),
   /** Force reduced motion even when the OS does not ask for it. */
   reduceMotion: z.boolean().optional(),
+  /** Echoes. Opt-in, because it changes what leaves the device. */
+  echoes: z.boolean().optional(),
+});
+
+/**
+ * An Echoes lookup.
+ *
+ * The draft is capped server-side as well as client-side. An unsent draft is
+ * the most sensitive thing this app sends anywhere, so the bound on it is not
+ * left to the caller.
+ */
+export const EchoRequestSchema = z.strictObject({
+  draft: z.string().trim().min(1).max(2_000),
+  /** Excluded from results — echoing the entry you are writing is noise. */
+  sessionId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,64}$/)
+    .optional(),
 });
 
 export const RenameSessionSchema = z.strictObject({

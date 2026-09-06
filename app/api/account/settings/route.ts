@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     const update: Record<string, unknown> = {};
     if (patch.defaultMode !== undefined) update['settings.defaultMode'] = patch.defaultMode;
     if (patch.reduceMotion !== undefined) update['settings.reduceMotion'] = patch.reduceMotion;
+    if (patch.echoes !== undefined) update['settings.echoes'] = patch.echoes;
 
     if (Object.keys(update).length > 0) {
       await userDoc(uid).set({ settings: {} }, { merge: true });

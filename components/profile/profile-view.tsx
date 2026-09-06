@@ -52,6 +52,7 @@ export function ProfileView({
 
   const [defaultMode, setDefaultMode] = useState(user.settings.defaultMode);
   const [reduceMotion, setReduceMotion] = useState(user.settings.reduceMotion);
+  const [echoes, setEchoes] = useState(user.settings.echoes);
 
   async function save(patch: Record<string, unknown>, key: string) {
     setSaving(key);
@@ -204,6 +205,69 @@ export function ProfileView({
             </span>
           </span>
         </label>
+
+        {/*
+          ── THE ONE SETTING THAT CHANGES WHAT LEAVES YOUR DEVICE ──
+          Every other preference here is cosmetic. This one sends text you have
+          not submitted to an embedding model, so it gets a different visual
+          weight, the full explanation in plain words rather than a tooltip, and
+          it defaults to off. The server enforces it too — see
+          app/api/echo/route.ts. A toggle is not a control.
+        */}
+        <div className="rounded-card brut bg-surface p-5">
+          <span className="chip-brut bg-sealed">Sends data while you type</span>
+
+          <label className="mt-3.5 flex cursor-pointer items-start gap-3.5">
+            <input
+              type="checkbox"
+              checked={echoes}
+              disabled={saving === 'echoes'}
+              onChange={async (e) => {
+                const next = e.target.checked;
+                setEchoes(next);
+                const ok = await save({ echoes: next }, 'echoes');
+                if (!ok) setEchoes(!next);
+              }}
+              className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
+            />
+            <span>
+              <span className="block text-[14px] font-bold text-ink">
+                Echoes — tell me when I&rsquo;ve been here before
+              </span>
+              <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-3">
+                While you write, if you pause for a moment, we send the draft to an
+                embedding model to look for older entries about the same thing. When one
+                turns up, a card appears with what you called it then and how your mood
+                compares.
+              </span>
+            </span>
+          </label>
+
+          <ul className="mt-3.5 flex flex-col gap-1.5 border-t-[3px] border-line pt-3.5 text-[12px] leading-relaxed text-ink-2">
+            <li>
+              <strong className="font-bold text-ink">This sends writing you have not
+              submitted.</strong>{' '}
+              A draft you might delete. That is why it is off until you turn it on.
+            </li>
+            <li>
+              Every check is recorded in your{' '}
+              <Link href="/security" className="text-accent underline underline-offset-2">
+                privacy ledger
+              </Link>{' '}
+              as <span className="font-mono text-[11px]">draft_text</span>. If it happens,
+              it is on the record.
+            </li>
+            <li>
+              It never runs while your vault is unlocked — a draft you may be about to
+              seal must not have been sent anywhere first.
+            </li>
+            <li>
+              Only your own entries are ever searched, and sealed ones cannot be found:
+              sealing deletes the embedding.
+            </li>
+            <li>The composer says &ldquo;echoes on&rdquo; the whole time it is watching.</li>
+          </ul>
+        </div>
 
         <p className="text-[12px] leading-relaxed text-ink-3">
           Light or dark is kept on this device rather than your account. Wanting dark on a

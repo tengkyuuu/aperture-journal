@@ -83,6 +83,31 @@ export interface VaultInfo {
 export interface UserSettings {
   defaultMode: import('../config').ConversationMode;
   reduceMotion: boolean;
+  /**
+   * Echoes. OFF unless the user turned it on.
+   *
+   * This is the only setting that changes what leaves the device, so it is the
+   * only one that defaults to off. See app/api/echo/route.ts — the server
+   * checks this too; the toggle is not the control.
+   */
+  echoes: boolean;
+}
+
+/**
+ * One echo: a past entry the draft resembles.
+ *
+ * `moodThen` is the mood recorded when that entry was closed. `valenceDelta`
+ * compares it with the most recent entry that has a mood, so the card can say
+ * the direction things have moved without a model inventing a feeling. It is
+ * null when there is nothing to compare against.
+ */
+export interface Echo {
+  sessionId: string;
+  title: string;
+  startedAt: string | null;
+  score: number;
+  moodThen: Mood | null;
+  valenceDelta: number | null;
 }
 
 export interface UserProfile {

@@ -12,6 +12,7 @@ import { VaultGate } from '@/components/vault/vault-gate';
 import { IconVault } from '@/components/shell/icons';
 
 import { Composer } from './composer';
+import { EchoCards, useEchoes } from './echoes';
 import { Distilling, InsightReveal } from './closing-ritual';
 import { MessageBlock, SealedBlock } from './message-block';
 
@@ -41,6 +42,7 @@ export function Canvas({
   closed = false,
   sealed = false,
   placeholder,
+  echoesEnabled = false,
 }: {
   sessionId?: string;
   initialMessages?: StoredMessage[];
@@ -49,6 +51,8 @@ export function Canvas({
   closed?: boolean;
   sealed?: boolean;
   placeholder?: string;
+  /** The user's stored Echoes preference. Off unless they turned it on. */
+  echoesEnabled?: boolean;
 }) {
   const router = useRouter();
   const vault = useVault();
@@ -281,6 +285,23 @@ export function Canvas({
 
   const showComposer = ritual === 'idle' && !closed && !sealed && sealState === 'idle';
 
+  /**
+   * Echoes only runs while there is actually a composer to write in, and never
+   * while the vault is unlocked — someone writing with the vault open may be
+   * about to seal this, and a draft destined for encryption must not have been
+   * sent off for comparison first.
+   */
+  const {
+    echoes,
+    armed: echoArmed,
+    dismiss: dismissEcho,
+  } = useEchoes({
+    draft: input,
+    sessionId: sessionId.current,
+    enabled: echoesEnabled && showComposer,
+    vaultUnlocked: vault.status === 'unlocked',
+  });
+
   return (
     <div className="flex flex-col gap-8">
       <div className={sealState === 'sealing' ? 'animate-seal-blur' : undefined}>
@@ -326,8 +347,11 @@ export function Canvas({
           placeholder={placeholder}
           canEnd={canEnd}
           onEnd={endSession}
+          echoArmed={echoArmed}
         />
       ) : null}
+
+      {showComposer ? <EchoCards echoes={echoes} onDismiss={dismissEcho} /> : null}
 
       {canSeal ? (
         <div className="flex flex-wrap items-center gap-3 border-t-[3px] border-line pt-5">

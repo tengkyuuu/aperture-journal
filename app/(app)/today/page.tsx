@@ -78,7 +78,11 @@ export default async function TodayPage() {
       </header>
 
       {/* The saved default mode, finally doing something. */}
-      <Canvas placeholder={promptForToday()} initialMode={profile.settings.defaultMode} />
+      <Canvas
+        placeholder={promptForToday()}
+        initialMode={profile.settings.defaultMode}
+        echoesEnabled={profile.settings.echoes}
+      />
 
       {!isNew ? (
         <div className="mt-16 flex flex-col gap-12 border-t-[3px] border-line pt-12">

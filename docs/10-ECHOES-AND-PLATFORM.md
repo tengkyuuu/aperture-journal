@@ -1,5 +1,9 @@
 # Roadmap — Echoes, and the whole web platform
 
+> **Echoes is BUILT.** `app/api/echo/route.ts`, `components/journal/echoes.tsx`,
+> 13 e2e assertions. What follows is the original design; the two notes marked
+> **BUILT** record where the implementation departed from it.
+
 The four graded requirements are done. The four enhancements are done. This is what would
 make it unforgettable rather than merely complete.
 
@@ -70,11 +74,20 @@ and every closed session already carries a 768-dim embedding and a mood.
 | Draft ≥ 120 characters | Below that, everything looks like everything |
 | ≥ 60 characters changed since last check | Stops it re-firing on the same thought |
 | ≥ 20s since the last check | Free-tier rate limits, and restraint |
-| Similarity ≥ 0.72 | Below this it surfaces noise and loses trust instantly |
+| Similarity ≥ 0.68 | Below this it surfaces noise and loses trust instantly |
 | Match older than 7 days | "You wrote this yesterday" is not an insight |
 
 **One wrong echo costs more than ten right ones.** A false positive makes the feature feel
 stupid, and people stop reading them. The threshold should err high.
+
+> **BUILT — 0.72 was the right instinct and the wrong number.** "Err high" was
+> argued, not measured. Measuring it (`npm run calibrate:echo`) gave: same
+> subject **0.729–0.773**, adjacent **0.597–0.636**, unrelated **0.539–0.554**.
+> So 0.72 left **0.009** of headroom above the weakest true match, and the e2e
+> assertion passed or failed depending on which summary the model happened to
+> write that run. The bar is now **0.68** — the midpoint of the separable band,
+> still far above an adjacent entry. A threshold defended by argument alone is a
+> guess wearing a justification.
 
 ### ⚠ The privacy problem, and the answer
 
@@ -97,6 +110,13 @@ That handling *is* the demo. Any team can bolt on a retrieval feature; showing t
 it changed the privacy contract and dealt with it is the submission.
 
 **Effort: ~4h.** Most of the machinery exists.
+
+> **BUILT — no generation call.** The design implies asking a model for the mood
+> delta. It does not: the delta is arithmetic over moods already stored, compared
+> against the most recent entry that has one. Asking a model how someone's
+> feelings changed invites it to invent a feeling they did not have, and this is
+> a record, not a reading. It also means Echoes costs exactly one embedding call,
+> which is what makes it viable on a free-tier key.
 
 ---
 
@@ -227,7 +247,7 @@ same reason the weather strip became pixel blocks.
 
 | # | Item | Effort | Why here |
 |---|---|---|---|
-| 1 | **Echoes** | 4h | The headline. Everything it needs exists. |
+| ~~1~~ | ~~**Echoes**~~ | ~~4h~~ | ✅ **BUILT** |
 | 2 | Offline drafts + PWA | 4h | Protects against the worst failure: losing someone's writing. |
 | 3 | The Long Argument | 3h | High payoff, low cost, reuses retrieval. |
 | 4 | Voice dictation | 2h | Free, and changes who can use the app at all. |

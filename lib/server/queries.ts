@@ -61,6 +61,8 @@ export async function getProfile(uid: string): Promise<UserProfile> {
     settings: {
       defaultMode: (snap.get('settings.defaultMode') as ConversationMode) ?? 'reflect',
       reduceMotion: snap.get('settings.reduceMotion') === true,
+      // Defaults to false on purpose: opt-in is the whole privacy story.
+      echoes: snap.get('settings.echoes') === true,
     },
   };
 }

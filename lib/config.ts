@@ -89,6 +89,49 @@ export const LIMITS = {
   maxAuthAgeSeconds: 5 * 60,
 } as const;
 
+/**
+ * Echoes — thresholds.
+ *
+ * Every number here exists to stop the feature being twitchy. One wrong echo
+ * costs more than ten right ones: a false positive makes it feel stupid and
+ * people stop reading them, permanently. So each threshold errs toward
+ * silence.
+ */
+export const ECHO = {
+  /** Interrupting mid-sentence is unforgivable. Wait for a real pause. */
+  pauseMs: 2_500,
+  /** Below this, everything looks like everything. */
+  minChars: 120,
+  /** Stops it re-firing on the same thought. */
+  minCharsChanged: 60,
+  /** Restraint, and free-tier rate limits. */
+  cooldownMs: 20_000,
+  /**
+   * Below this similarity it surfaces noise and loses trust instantly.
+   *
+   * MEASURED, not guessed — `npm run calibrate:echo` scores drafts against a
+   * realistic entry in three bands:
+   *
+   *   same subject   0.729 … 0.773
+   *   adjacent       0.597 … 0.636   ← same life, different subject
+   *   unrelated      0.539 … 0.554
+   *
+   * So anything in (0.636, 0.729) separates them. This was 0.72 on the
+   * argument that the bar should err high, which was the right instinct and
+   * the wrong number: it left 0.009 of headroom above the weakest true match,
+   * and the e2e echo assertion passed or failed depending on the run. 0.68 is
+   * the midpoint — still far above an adjacent entry, no longer on a knife
+   * edge. Re-run the calibration if the embedding model changes.
+   */
+  minScore: 0.68,
+  /** "You wrote this yesterday" is not an insight. */
+  minAgeDays: 7,
+  /** How many candidates to score before filtering. */
+  topK: 8,
+  /** Never send more of an unsent draft than this. */
+  maxDraftChars: 2_000,
+} as const;
+
 export const SESSION_COOKIE_NAME = '__session';
 
 /**

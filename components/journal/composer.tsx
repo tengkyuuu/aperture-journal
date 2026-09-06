@@ -36,6 +36,7 @@ export function Composer({
   placeholder,
   canEnd,
   onEnd,
+  echoArmed,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -47,6 +48,8 @@ export function Composer({
   placeholder?: string;
   canEnd?: boolean;
   onEnd?: () => void;
+  /** Echoes is on and watching this draft. Never run it without saying so. */
+  echoArmed?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -143,6 +146,23 @@ export function Composer({
         <Key>⌘K</Key> to jump
         <span aria-hidden>·</span>
         <Key>?</Key> for keys
+        {/*
+          Echoes reads this draft when you pause. It says so here, always,
+          while it is armed. A feature that sends unsent writing anywhere and
+          does not admit it on screen is the thing this app exists not to be.
+        */}
+        {echoArmed ? (
+          <>
+            <span aria-hidden>·</span>
+            <span
+              title="When you pause, this draft is sent to the embedding model to look for past entries like it. Turn it off in your profile."
+              className="inline-flex items-center gap-1 font-medium text-ink-2"
+            >
+              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-sealed" />
+              echoes on
+            </span>
+          </>
+        ) : null}
       </p>
     </div>
   );

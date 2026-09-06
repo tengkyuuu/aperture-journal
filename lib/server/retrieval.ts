@@ -2,6 +2,7 @@ import 'server-only';
 
 import { sessionsCol } from './db';
 import { wrapUntrusted } from './injection';
+import type { Mood } from '../shared/types';
 
 /**
  * Retrieval over the user's own journal.
@@ -36,6 +37,13 @@ export interface Retrieved {
   summary: string;
   startedAt: Date | null;
   score: number;
+  /**
+   * The mood recorded when this entry closed. Carried here rather than
+   * re-fetched, because the document is already open — Echoes needs it, and
+   * buildContext deliberately ignores it: a mood label is a reading of the
+   * user, not evidence, and it has no business in a grounding prompt.
+   */
+  mood: Mood | null;
 }
 
 /**
@@ -71,6 +79,9 @@ export async function retrieve(
       title: (doc.get('title') as string) ?? 'Untitled',
       summary,
       startedAt: doc.get('startedAt')?.toDate?.() ?? null,
+      // Mood lives inside the `insights` map written at close, not at the
+      // top level of the session document.
+      mood: (doc.get('insights.mood') as Mood | undefined) ?? null,
       score: cosine(queryVector, embedding),
     });
   }

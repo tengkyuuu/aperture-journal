@@ -22,12 +22,19 @@ export type DataClass =
   | 'question_only'
   | 'single_message'
   | 'session_messages'
-  | 'summary_only';
+  | 'summary_only'
+  /**
+   * Text the user has NOT sent — a draft mid-composition, forwarded to the
+   * embedding model by Echoes. It is its own class precisely because it is a
+   * category apart: everything else here was something the user chose to
+   * submit. If this is happening, it is on the record.
+   */
+  | 'draft_text';
 
 export interface LedgerEntry {
   route: string;
   model: string;
-  purpose: 'chat' | 'summarize' | 'embed' | 'ask';
+  purpose: 'chat' | 'summarize' | 'embed' | 'ask' | 'echo';
   inputTokens: number;
   outputTokens: number;
   latencyMs: number;

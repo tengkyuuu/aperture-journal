@@ -28,6 +28,30 @@ Cloud Run · `asia-southeast1` · service `aperture` · labelled `dev-tutorial=c
 | **Emotional Weather + Theme Graph** | Structured-output mood and theme extraction, rendered as a year-long gradient ribbon and a theme constellation. |
 | **Ask Your Past** | Retrieval over your own entries with grounded, cited answers. |
 
+### The headline: Echoes
+
+> Your journal interrupts you — gently — when you have been here before.
+
+Most journals are write-only. You pour something in and the archive never speaks
+back, and every "insights dashboard" is a report you have to remember to go and
+read. Echoes inverts that: while you are typing, if you pause, it looks for older
+entries about the same thing and tells you what you called it then and how your
+mood compares.
+
+It needs your own history, embeddings over it, and a mood extracted at write
+time. The first two were built for Ask Your Past and the third for the weather
+ribbon — Echoes is what they were secretly for.
+
+**It sends writing you have not submitted**, which is a real escalation of what
+leaves the device. So it is off until you turn it on, the server enforces that
+rather than the UI, it is ledgered as its own `draft_text` class, it never runs
+while the vault is unlocked, and the composer says `echoes on` the entire time it
+is watching. That handling is the point as much as the feature is.
+
+The similarity bar is **measured, not argued** — `npm run calibrate:echo` scores
+drafts in three bands (same subject 0.73–0.77, adjacent 0.60–0.64, unrelated
+0.54–0.55) and the threshold sits at the midpoint of the gap.
+
 ---
 
 ## Planning documents
@@ -86,6 +110,8 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | `npm run test:e2e` | Two real users through the whole app, then a leak attempt |
 | `npm run verify:no-secrets` | Scans the built bundle for keys; add `-- --history` to scan every commit |
 | `npm run emulators` | Firestore + Auth emulators for local development |
+| `npm run calibrate:echo` | Measures where the Echoes similarity threshold should sit |
+| `npm run logo` | Rebuilds every brand asset from `assets/logo-source.png` |
 
 ## Status
 
