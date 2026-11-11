@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { requireUid } from '@/lib/server/auth';
-import { embed, estimateTokens } from '@/lib/server/gemini';
+import { embed, estimateTokens } from '@/lib/server/ai';
 import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { recordAiCall } from '@/lib/server/ledger';
 import { log, uidTag } from '@/lib/server/logger';
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     const inputTokens = estimateTokens(text);
     await consumeQuota(uid, inputTokens);
 
-    const { values } = await embed(text, 'RETRIEVAL_QUERY');
+    const { values } = await embed(text);
 
     // Ledgered immediately. Every path from here on has already disclosed
     // that an unsent draft was sent, including the paths that find nothing.

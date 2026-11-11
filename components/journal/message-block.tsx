@@ -93,7 +93,7 @@ export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
       <span className="size-2.5 shrink-0 border-2 border-line bg-sealed" aria-hidden />
       <p className="text-[13px] text-ink-3">
         <span className="text-sealed">Sealed.</span> Only your passphrase opens this — not us,
-        not Gemini.
+        not the AI.
       </p>
       {onUnlock ? (
         <button

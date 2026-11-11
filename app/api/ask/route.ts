@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { requireUid } from '@/lib/server/auth';
-import { embed, estimateTokens, streamGroundedAnswer } from '@/lib/server/gemini';
+import { embed, estimateTokens, streamGroundedAnswer } from '@/lib/server/ai';
 import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { scanForInjection } from '@/lib/server/injection';
 import { recordAiCall, recordSecurityEvent } from '@/lib/server/ledger';
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { values: queryVector } = await embed(question, 'RETRIEVAL_QUERY');
+    const { values: queryVector } = await embed(question);
     await recordAiCall(uid, {
       route: '/api/ask',
       model: MODELS.embedding,
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
     /**
      * Close out the accounting, whether the answer finished or was stopped.
      *
-     * The ledger row is the point. A stopped answer still reached Gemini and
+     * The ledger row is the point. A stopped answer still reached the model and
      * still spent tokens, and the Security page promises that every such call
      * is recorded. Cancelling used to skip this entirely.
      */

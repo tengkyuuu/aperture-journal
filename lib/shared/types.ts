@@ -28,7 +28,7 @@ export interface Entity {
 }
 
 /**
- * The structured object Gemini returns when a session closes. One call
+ * The structured object the model returns when a session closes. One call
  * produces the summary, the mood ribbon, the theme graph, and the weekly
  * chapter — which is why the enhancement budget fits in a four-day sprint.
  */

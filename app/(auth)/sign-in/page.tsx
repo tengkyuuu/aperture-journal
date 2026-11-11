@@ -105,7 +105,7 @@ export default function SignInPage() {
             ['Yours alone', 'Every entry is stored under your account and nobody else’s.'],
             [
               'Sealed means sealed',
-              'Encrypted in this browser. We cannot read it. Neither can Gemini.',
+              'Encrypted in this browser. We cannot read it. Neither can the AI.',
             ],
             ['Nothing hidden', 'Every call to the model is logged where you can see it.'],
           ].map(([title, body], i) => (

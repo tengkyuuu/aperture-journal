@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { ZodError, type ZodType } from 'zod';
 
 import { assertAppCheck, FailedAttestation } from './appcheck';
-import { errorStatus, ProviderBusy } from './gemini';
+import { errorStatus, ProviderBusy } from './ai';
 import { Unauthenticated } from './auth';
 import { log } from './logger';
 

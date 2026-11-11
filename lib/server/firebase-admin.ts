@@ -1,21 +1,36 @@
 import 'server-only';
 
-import { getApps, initializeApp, type App } from 'firebase-admin/app';
+import { cert, getApps, initializeApp, type App, type AppOptions } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
 /**
  * Firebase Admin initialisation.
  *
- * On Cloud Run (Firebase App Hosting) this picks up Application Default
- * Credentials from the attached service account — no key file exists anywhere,
- * which is the entire point. Locally it uses `gcloud auth application-default
- * login`, or the emulator suite when FIRESTORE_EMULATOR_HOST is set.
+ * Off Google Cloud (Vercel), there are no Application Default Credentials, so
+ * the service account is supplied as FIREBASE_SERVICE_ACCOUNT — the key JSON,
+ * either raw or base64-encoded (base64 survives dashboards that mangle
+ * newlines in the private key). Without it this falls back to ADC:
+ * `gcloud auth application-default login` locally, or the emulator suite when
+ * FIRESTORE_EMULATOR_HOST is set.
  *
  * The Admin SDK BYPASSES Firestore security rules. That is why every data
  * helper in lib/server/db.ts takes a uid that came from requireUid() and
  * nowhere else.
  */
+
+function credentialOptions(): Pick<AppOptions, 'credential'> {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (!raw) return {};
+
+  const json = raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
+  try {
+    return { credential: cert(JSON.parse(json)) };
+  } catch {
+    // Never echo the value — it is a private key.
+    throw new Error('SERVICE_ACCOUNT_INVALID');
+  }
+}
 
 function projectId(): string | undefined {
   return (
@@ -30,7 +45,9 @@ let cached: { app: App; auth: Auth; db: Firestore } | null = null;
 function init() {
   if (cached) return cached;
 
-  const app = getApps().length ? getApps()[0]! : initializeApp({ projectId: projectId() });
+  const app = getApps().length
+    ? getApps()[0]!
+    : initializeApp({ projectId: projectId(), ...credentialOptions() });
   const auth = getAuth(app);
   const db = getFirestore(app);
 

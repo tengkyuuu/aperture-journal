@@ -86,7 +86,7 @@ export function Canvas({
   /**
    * The in-flight generation, so it can be stopped.
    *
-   * The server has always forwarded req.signal into Gemini and implemented
+   * The server has always forwarded req.signal into the model call and implemented
    * cancel() on the stream — it was ready to be interrupted and nothing on
    * this side ever did it. Also fixes a real leak: navigating away mid-stream
    * left the reader loop running and calling setTurns on an unmounted tree.
@@ -431,7 +431,7 @@ export function Canvas({
             Seal this entry
           </button>
           <p className="text-[12px] leading-relaxed text-ink-3">
-            Encrypted in this browser. Neither we nor Gemini can read it afterwards — which
+            Encrypted in this browser. Neither we nor the AI can read it afterwards — which
             also means no summary, no search, and no mood tracking for it.
           </p>
         </div>

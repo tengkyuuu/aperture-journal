@@ -21,6 +21,7 @@ const ROOT = '.next/static';
 
 const PATTERNS = [
   { name: 'Google API key', re: /\bAIza[0-9A-Za-z_-]{35}\b/ },
+  { name: 'Groq API key', re: /\bgsk_[0-9A-Za-z]{40,}\b/ },
   { name: 'PEM private key', re: /-----BEGIN (RSA |EC )?PRIVATE KEY-----/ },
   { name: 'Service account JSON', re: /"type"\s*:\s*"service_account"/ },
   { name: 'Secret Manager client', re: /SecretManagerServiceClient/ },
@@ -99,8 +100,8 @@ console.log('  No API keys, private keys, or Secret Manager references in client
 // and removed later is still in the history, and still leaked — deleting the
 // line from the working tree fixes nothing.
 //
-// The Firebase web API key is expected here too: it is public config and lives
-// in apphosting.yaml on purpose. Any OTHER key-shaped string fails.
+// The Firebase web API key is expected here too: it is public config and was
+// committed in apphosting.yaml on purpose. Any OTHER key-shaped string fails.
 
 if (process.argv.includes('--history')) {
   console.log('');

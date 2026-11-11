@@ -2,7 +2,7 @@
 /**
  * Live end-to-end verification against a running server.
  *
- * Drives two real users through the whole app — sign in, converse with Gemini,
+ * Drives two real users through the whole app — sign in, converse with the model,
  * distil, seal, retrieve — and then tries to make one read the other's data.
  *
  * ── WHY CUSTOM TOKENS ──
@@ -27,6 +27,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 // Imported rather than duplicated: a test with its own copy of the threshold
 // it is testing will keep passing after the threshold moves.
 import { ECHO } from '../lib/config.ts';
+// Loads .env.local into process.env, and shares the app's credential rules.
+import { EMBED_DIMS, initAdmin } from './lib/providers.mjs';
 
 // Port 3200, not 3000 — another project on this machine owns 3000, and a
 // reachability check that silently hits someone else's app is a bad time.
@@ -52,15 +54,16 @@ function bad(l, d = '') { console.log(`  ✗ ${l}${d ? ` — ${d}` : ''}`); fail
 function section(n) { console.log(`\n${n}`); }
 
 /**
- * `serviceAccountId` is required because createCustomToken signs LOCALLY, and
- * Application Default Credentials belonging to a human cannot sign as a
- * service account without being told which one to impersonate.
+ * With FIREBASE_SERVICE_ACCOUNT set (the normal case now), the key signs custom
+ * tokens itself — same credential rules as the app.
  *
- * On Cloud Run this is unnecessary — the runtime SA signs for itself, which is
- * the tokenCreator-on-itself binding granted in Day 0. This line exists purely
- * so the check can run from a laptop.
+ * Without it, `serviceAccountId` is required because createCustomToken signs
+ * LOCALLY, and Application Default Credentials belonging to a human cannot
+ * sign as a service account without being told which one to impersonate.
  */
-if (!getApps().length) {
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  initAdmin();
+} else if (!getApps().length) {
   initializeApp({
     projectId: PROJECT,
     serviceAccountId: process.env.E2E_SIGNER ?? `journal-runtime@${PROJECT}.iam.gserviceaccount.com`,
@@ -108,7 +111,7 @@ async function signIn(uid, email) {
 }
 
 /**
- * Free-tier Gemini projects rate-limit hard, and this script fires six model
+ * Free-tier model providers rate-limit hard, and this script fires six model
  * calls in a row. A short pause between them is the difference between testing
  * the app and testing the quota. Skipped with E2E_FAST=1 on a paid project.
  */
@@ -256,7 +259,9 @@ try {
 
     const doc = await db.doc(`users/${UIDS.alice}/sessions/${sessionId}`).get();
     const emb = doc.get('embedding');
-    emb?.length === 768 ? ok('embedding stored', '768 dims') : bad('embedding', `got ${emb?.length}`);
+    emb?.length === EMBED_DIMS
+      ? ok('embedding stored', `${EMBED_DIMS} dims`)
+      : bad('embedding', `got ${emb?.length}, expected ${EMBED_DIMS}`);
   } else {
     bad('summarize', `${sum.status} ${(await sum.text()).slice(0, 120)}`);
   }
@@ -411,10 +416,10 @@ try {
   }
 
   // ── Stopping a generation ────────────────────────────────────────────────
-  // The server forwards req.signal into Gemini and implements cancel(), so a
+  // The server forwards req.signal into the model call and implements cancel(), so a
   // stopped answer really does stop. The risk is the accounting: all of it used
   // to live in the `done` branch, so aborting skipped the ledger row entirely —
-  // a call that reached Gemini and spent tokens, with no record. The Security
+  // a call that reached the model and spent tokens, with no record. The Security
   // page promises every such call is recorded, so this asserts it.
   section('Stopping a generation');
   await pace();
@@ -448,7 +453,7 @@ try {
     }
     after > before
       ? ok('stopped call still ledgered', `${before} to ${after} rows — the record survives the stop`)
-      : bad('LEDGER GAP', 'a stopped call reached Gemini and left no row');
+      : bad('LEDGER GAP', 'a stopped call reached the model and left no row');
   }
 
   // ── Privacy Ledger ───────────────────────────────────────────────────────

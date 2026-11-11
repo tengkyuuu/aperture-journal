@@ -8,8 +8,8 @@
  * the kind of margin that means the feature either misfires or never fires at
  * all, depending on the day.
  *
- * This measures the real distribution. It embeds a realistic session summary as
- * a DOCUMENT, then scores drafts against it as QUERIES, in three bands:
+ * This measures the real distribution. It embeds a realistic session summary,
+ * then scores drafts against it, in three bands:
  *
  *   same      — the thing the entry was about
  *   adjacent  — same life, different subject. MUST NOT echo.
@@ -22,33 +22,10 @@
  *   node scripts/calibrate-echo.mjs
  */
 
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-import { GoogleGenAI } from '@google/genai';
-
 import { ECHO, MODELS } from '../lib/config.ts';
+import { dot, embedOne } from './lib/providers.mjs';
 
-const EMBED_DIMS = 768;
-
-const PROJECT =
-  process.env.GOOGLE_CLOUD_PROJECT ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '';
-const SECRET = process.env.GEMINI_SECRET_NAME ?? 'GEMINI_API_KEY';
-
-async function apiKey() {
-  const sm = new SecretManagerServiceClient();
-  const [v] = await sm.accessSecretVersion({
-    name: `projects/${PROJECT}/secrets/${SECRET}/versions/latest`,
-  });
-  const key = v.payload?.data?.toString();
-  if (!key) throw new Error('SECRET_UNAVAILABLE');
-  return key;
-}
-
-/** The app normalises on write, so a dot product is the cosine. */
-function normalise(v) {
-  const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
-  return n === 0 ? v : v.map((x) => x / n);
-}
-const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+console.log(`model: ${MODELS.embedding}\n`);
 
 // A plausible closed-session summary — the kind of text Echoes searches over.
 const ENTRY = `
@@ -75,24 +52,13 @@ const DRAFTS = {
   ],
 };
 
-const ai = new GoogleGenAI({ apiKey: await apiKey() });
-
-async function vec(text, taskType) {
-  const res = await ai.models.embedContent({
-    model: MODELS.embedding,
-    contents: text,
-    config: { outputDimensionality: EMBED_DIMS, taskType },
-  });
-  return normalise(res.embeddings[0].values);
-}
-
-const docVec = await vec(ENTRY, 'RETRIEVAL_DOCUMENT');
+const docVec = await embedOne(ENTRY);
 
 const scores = {};
 for (const [band, drafts] of Object.entries(DRAFTS)) {
   scores[band] = [];
   for (const d of drafts) {
-    const s = dot(docVec, await vec(d, 'RETRIEVAL_QUERY'));
+    const s = dot(docVec, await embedOne(d));
     scores[band].push(s);
     console.log(`${band.padEnd(10)} ${s.toFixed(3)}  ${d.slice(0, 62)}…`);
   }

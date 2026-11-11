@@ -23,20 +23,16 @@
 
 import { readFileSync } from 'node:fs';
 
-import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { GoogleGenAI } from '@google/genai';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
-import { MODELS } from '../lib/config.ts';
+import { embedOne, initAdmin } from './lib/providers.mjs';
 
-const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? 'aperture-journal';
 const args = process.argv.slice(2);
 const CLEAR = args.includes('--clear');
 const EMAIL = args[args.indexOf('--email') + 1];
 
-if (!getApps().length) initializeApp({ projectId: PROJECT });
+initAdmin();
 const auth = getAuth();
 const db = getFirestore();
 
@@ -198,20 +194,6 @@ async function findUid() {
   return real[0].uid;
 }
 
-async function geminiClient() {
-  const sm = new SecretManagerServiceClient();
-  const [v] = await sm.accessSecretVersion({
-    name: `projects/${PROJECT}/secrets/GEMINI_API_KEY/versions/latest`,
-  });
-  return new GoogleGenAI({ apiKey: v.payload.data.toString() });
-}
-
-/** Matches lib/server/gemini.ts — sub-3072 output must be normalised by hand. */
-function normalise(values) {
-  const mag = Math.sqrt(values.reduce((n, v) => n + v * v, 0));
-  return mag === 0 ? values : values.map((v) => v / mag);
-}
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ─── Run ────────────────────────────────────────────────────────────────────
@@ -233,7 +215,6 @@ if (!existing.empty) {
 }
 
 console.log(`Seeding ${SESSIONS.length} sessions for ${uid}\n`);
-const ai = await geminiClient();
 
 for (const [i, s] of SESSIONS.entries()) {
   const startedAt = new Date(Date.now() - s.ago * 86_400_000);
@@ -254,12 +235,7 @@ for (const [i, s] of SESSIONS.entries()) {
   // Real embedding — retrieval has to genuinely work.
   let embedding;
   try {
-    const res = await ai.models.embedContent({
-      model: MODELS.embedding,
-      contents: `${s.title}. ${s.summary}`,
-      config: { outputDimensionality: 768, taskType: 'RETRIEVAL_DOCUMENT' },
-    });
-    embedding = normalise(res.embeddings[0].values);
+    embedding = await embedOne(`${s.title}. ${s.summary}`);
   } catch (err) {
     console.log(`  ! ${s.title} — embedding failed, entry will not be searchable`);
     console.log(`    ${String(err).slice(0, 100)}`);

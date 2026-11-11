@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { requireUid } from '@/lib/server/auth';
 import { assertSafeId, messagesCol, sessionDoc } from '@/lib/server/db';
-import { embed, estimateTokens, summarizeSession } from '@/lib/server/gemini';
+import { embed, estimateTokens, summarizeSession } from '@/lib/server/ai';
 import { assertRequestIntegrity, BadRequest, parseBody, toErrorResponse } from '@/lib/server/http';
 import { recordAiCall } from '@/lib/server/ledger';
 import { log, uidTag } from '@/lib/server/logger';
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
      */
     let embedding: number[] | undefined;
     try {
-      const result = await embed(`${insights.title}. ${insights.summary}`, 'RETRIEVAL_DOCUMENT');
+      const result = await embed(`${insights.title}. ${insights.summary}`);
       embedding = result.values;
 
       await recordAiCall(uid, {

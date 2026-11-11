@@ -28,7 +28,7 @@ export type Failure =
   | { kind: 'offline' }
   /** 429 — the user's own daily budget, not the provider's. */
   | { kind: 'rate_limited' }
-  /** 503 — Gemini is busy. Not a bug, and worth trying shortly. */
+  /** 503 — the model provider is busy. Not a bug, and worth trying shortly. */
   | { kind: 'provider_busy' }
   | { kind: 'unauthenticated' }
   | { kind: 'attestation' }
@@ -120,7 +120,7 @@ export function describe(f: Failure): { title: string; body?: string } {
         body: 'It resets at midnight UTC. Nothing was lost.',
       };
     case 'provider_busy':
-      return { title: 'Gemini is busy right now.', body: 'Worth trying again in a moment.' };
+      return { title: 'The AI is busy right now.', body: 'Worth trying again in a moment.' };
     case 'timeout':
       return { title: 'That took too long.', body: 'Nothing was sent.' };
     case 'unauthenticated':

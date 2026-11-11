@@ -2,70 +2,72 @@
  * Central configuration. Model IDs live in exactly one place so that a model
  * rename is a one-line change, not a grep-and-pray across the codebase.
  *
- * VERIFY THESE IN GOOGLE AI STUDIO BEFORE THE FIRST BUILD. Model identifiers
- * move faster than any plan document.
+ * ══ WHY THESE PROVIDERS ══
+ * The app runs at $0. Text generation is Groq's free tier; embeddings are
+ * Cloudflare Workers AI's free daily allocation. Neither account has a card
+ * attached, so neither can bill — a quota wall is the worst case, and the app
+ * already turns that into an honest "the model is busy".
+ *
+ * Model identifiers move faster than any plan document. Re-check with:
+ *   npm run verify:ai
  */
 
 export const MODELS = {
-  /** Conversation. Measured against the live API — see the findings below. */
-  chat: 'gemini-3.1-flash-lite',
+  /** Conversation (Groq). Fast enough that a reply lands as you finish reading. */
+  chat: 'openai/gpt-oss-120b',
   /**
    * Used when the primary is rate-limited or overloaded. A DIFFERENT model,
-   * because the free tier meters per model: when one is exhausted for the day,
-   * another still has budget.
+   * because Groq's free tier meters per model: when one is exhausted for the
+   * day, another still has budget.
    */
-  chatFallback: 'gemini-3.8-flash',
-  /** Session summaries. Structured output verified working. */
-  synthesis: 'gemini-3.1-flash-lite',
-  synthesisFallback: 'gemini-3.8-flash',
-  /** Retrieval embeddings for "Ask Your Past". 768 dims verified. */
-  embedding: 'gemini-embedding-001',
+  chatFallback: 'openai/gpt-oss-20b',
+  /**
+   * Session summaries (Groq). Both gpt-oss models support `strict` structured
+   * output — constrained decoding, so the JSON always matches the schema.
+   */
+  synthesis: 'openai/gpt-oss-120b',
+  synthesisFallback: 'openai/gpt-oss-20b',
+  /**
+   * Retrieval embeddings (Cloudflare Workers AI). bge-m3 rather than
+   * bge-base-en: it is multilingual (journals are written in whatever language
+   * the writer thinks in, Taglish included), it reads 8K tokens instead of 512,
+   * and it costs about a sixth of the neurons, so the free 10K/day goes further.
+   */
+  embedding: '@cf/baai/bge-m3',
 } as const;
 
 /**
- * ══ MODEL SELECTION — measured, and re-measured ══
+ * ══ GROQ FREE-TIER LIMITS (Nov 2026, per model) ══
  *
- * `gemini-2.5-flash` is GONE: 404, "no longer available to new users".
+ *   30 requests/min · 1K requests/day · 8K tokens/min · 200K tokens/day
  *
- * Two rounds of probing with this app's own request shapes, a day apart,
- * because the first round drew a wrong conclusion worth recording:
+ * 8K tokens/min is the one that bites: a single request bigger than that is
+ * refused outright, not queued. So every prompt is trimmed to fit a budget
+ * before it is sent — see PROMPT_BUDGET and fitTurns() in lib/server/ai.ts.
  *
- *   gemini-3.6-flash        REJECTS thinkingConfig.thinkingBudget: 0 with a
- *                           bare 400. Real and reproducible.
- *   gemini-3.5-flash-lite   Same 400.
- *   gemini-flash-lite-latest Same 400.
- *   gemini-3.8-flash        ACCEPTS budget 0. The first round recorded it as
- *                           rejecting — that was a 503 under load misread as
- *                           the 400 its neighbour returned. Fast when it
- *                           answers, but 503s often enough to be a demo risk.
- *   gemini-3.1-flash-lite   Accepts budget 0. ~0.7s chat, ~1.0s structured
- *                           output, correct mood polarity. No 503s observed.
- *
- * So: 3.1-flash-lite primary, 3.8-flash as the fallback. A journaling reply
- * should land immediately, and sub-second is the difference between a
- * conversation and a wait.
- *
- * IF YOU MIGRATE to 3.6 or either flash-lite-latest, you MUST drop
- * `thinkingBudget: 0` from streamChat or every chat request will 400.
- *
- * On a PAID project, prefer gemini-3.8-flash or gemini-flash-latest for the
- * primary — better quality, and the 503s are a free-tier capacity artefact.
- *
- * Re-check any time with: npm run verify:gemini
+ * gpt-oss models reason before answering, and reasoning tokens count against
+ * max_completion_tokens. Effort is pinned to "low" (a journaling reply does
+ * not need deliberation) and REASONING_HEADROOM keeps the reasoning from
+ * eating the answer.
  */
+export const PROMPT_BUDGET = {
+  /** Estimated input tokens for one chat turn, history included. */
+  chat: 4_500,
+  /** Estimated input tokens for a session summary. */
+  summary: 4_000,
+} as const;
+
+export const REASONING_HEADROOM = 512;
 
 /**
- * Approximate USD per 1M tokens, used only to render an honest cost estimate in
- * the Privacy Ledger. These are estimates shown to the user as estimates —
- * never billed against, never used for enforcement. Verify against current
- * pricing before the demo.
+ * Approximate USD per 1M tokens AT PAID-TIER RATES, used only to show what a
+ * call would have cost. On the free tier the actual charge is $0 — the ledger
+ * says so. Never billed against, never used for enforcement.
  */
 export const PRICING_PER_MTOK: Record<string, { input: number; output: number }> = {
-  'gemini-3.1-flash-lite': { input: 0.1, output: 0.4 },
-  'gemini-3.5-flash': { input: 0.3, output: 2.5 },
-  'gemini-3.6-flash': { input: 0.3, output: 2.5 },
-  'gemini-3.8-flash': { input: 0.3, output: 2.5 },
-  'gemini-embedding-001': { input: 0.15, output: 0 },
+  'openai/gpt-oss-120b': { input: 0.15, output: 0.6 },
+  'openai/gpt-oss-20b': { input: 0.075, output: 0.3 },
+  '@cf/baai/bge-m3': { input: 0.012, output: 0 },
 };
 
 /**
@@ -73,7 +75,7 @@ export const PRICING_PER_MTOK: Record<string, { input: number; output: number }>
  * unpriced model would be worse than showing an approximation — a ledger that
  * quietly reports nothing for half its rows is not a ledger.
  */
-export const FALLBACK_PRICE_PER_MTOK = { input: 0.3, output: 2.5 };
+export const FALLBACK_PRICE_PER_MTOK = { input: 0.15, output: 0.6 };
 
 /** Hard ceilings. Every model call is bounded; unbounded inference is a bill. */
 export const LIMITS = {
@@ -120,21 +122,21 @@ export const ECHO = {
   /**
    * Below this similarity it surfaces noise and loses trust instantly.
    *
-   * MEASURED, not guessed — `npm run calibrate:echo` scores drafts against a
-   * realistic entry in three bands:
+   * MEASURED for @cf/baai/bge-m3 — `npm run calibrate:echo`, 2026-11-12:
    *
-   *   same subject   0.729 … 0.773
-   *   adjacent       0.597 … 0.636   ← same life, different subject
-   *   unrelated      0.539 … 0.554
+   *   same subject   0.540 … 0.670
+   *   adjacent       0.466 … 0.520   ← same life, different subject
+   *   unrelated      0.365 … 0.480
    *
-   * So anything in (0.636, 0.729) separates them. This was 0.72 on the
-   * argument that the bar should err high, which was the right instinct and
-   * the wrong number: it left 0.009 of headroom above the weakest true match,
-   * and the e2e echo assertion passed or failed depending on the run. 0.68 is
-   * the midpoint — still far above an adjacent entry, no longer on a knife
-   * edge. Re-run the calibration if the embedding model changes.
+   * 0.53 is the midpoint of the (0.520, 0.540) gap. That gap is narrow — the
+   * gemini-embedding-001 bands this replaced were 0.09 apart, these are 0.02 —
+   * and the top "adjacent" draft is the one that shares "sleeping badly" with
+   * the entry, so it is not pure noise either. If Echoes starts to feel
+   * twitchy in real use, raise this toward 0.60: that still catches the two
+   * strong same-subject drafts (0.667, 0.670) and only gives up the weakest
+   * paraphrase. Re-run the calibration if the embedding model changes.
    */
-  minScore: 0.68,
+  minScore: 0.53,
   /** "You wrote this yesterday" is not an insight. */
   minAgeDays: 7,
   /** How many candidates to score before filtering. */

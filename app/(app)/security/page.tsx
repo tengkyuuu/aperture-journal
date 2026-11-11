@@ -26,7 +26,7 @@ export default async function SecurityPage() {
           Security &amp; privacy
         </h1>
         <p className="prose-journal mt-4 text-ink-2">
-          Every call this app makes to Gemini on your behalf is recorded here — what was sent,
+          Every call this app makes to an AI model on your behalf is recorded here — what was sent,
           how much of it, and what it cost.
         </p>
       </header>

@@ -1,12 +1,12 @@
-# Aperture — a Personal Gemini Journal
+# Aperture — a Personal AI Journal
 
-**▶ Live: https://aperture-123144439483.asia-southeast1.run.app**
-Cloud Run · `asia-southeast1` · service `aperture` · labelled `dev-tutorial=cloud-run-ai-challenge`
+> An authenticated, end-to-end-encrypted journaling companion — designed security-first, from a
+> written constitution down to the security rules. **Runs at $0**: Vercel Hobby, Firebase Spark,
+> Groq and Cloudflare Workers AI free tiers, none of them with a card attached.
 
-> An authenticated, end-to-end-encrypted journaling companion built on Gemini, Firebase and
-> Google Cloud — designed security-first, from a written constitution down to the security rules.
-
-**Google Ideathon submission.** Planning docs live in [docs/](docs/).
+Originally a **Google Ideathon submission** on Cloud Run + Gemini; it moved off billed Google
+Cloud services in November 2026. Planning docs live in [docs/](docs/) and describe the original
+Google Cloud build.
 
 ---
 
@@ -15,15 +15,15 @@ Cloud Run · `asia-southeast1` · service `aperture` · labelled `dev-tutorial=c
 | Requirement | Implementation |
 |---|---|
 | **Authentication** | Firebase Auth (Google) → server-verified ID token → httpOnly session cookie with revocation checking |
-| **Multi-turn AI** | Streaming Gemini conversations across four modes, with structured auto-summarization |
+| **Multi-turn AI** | Streaming Groq (gpt-oss) conversations across four modes, with strict structured auto-summarization |
 | **Isolated storage** | Path-scoped Firestore `/users/{uid}/…`, deny-by-default rules, write-through-server, automated cross-tenant tests |
-| **Secret management** | Runtime retrieval from Google Cloud Secret Manager, memory-cached, `server-only` build guard, secret-scoped IAM |
+| **Secret management** | Host-encrypted environment variables read only behind a `server-only` build guard; secret scanning of bundle and git history |
 
 ## The four enhancements
 
 | Feature | What it does |
 |---|---|
-| **Zero-Knowledge Vault** | Client-side AES-GCM. Sealed entries are ciphertext the server cannot read and Gemini never sees. |
+| **Zero-Knowledge Vault** | Client-side AES-GCM. Sealed entries are ciphertext the server cannot read and the AI never sees. |
 | **Privacy Ledger + Injection Firewall** | Every model call logged to a per-user append-only ledger. Injection attempts detected and surfaced. |
 | **Emotional Weather + Theme Graph** | Structured-output mood and theme extraction, rendered as a year-long gradient ribbon and a theme constellation. |
 | **Ask Your Past** | Retrieval over your own entries with grounded, cited answers. |
@@ -75,25 +75,39 @@ drafts in three bands (same subject 0.73–0.77, adjacent 0.60–0.64, unrelated
 ## Stack
 
 Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind v4
-Firebase Auth · Cloud Firestore · Firebase App Hosting (Cloud Run)
-Google Cloud Secret Manager · Gemini via `@google/genai`
+Firebase Auth · Cloud Firestore (Spark plan) · hosted on Vercel Hobby
+Groq via `groq-sdk` (chat, summaries, answers) · Cloudflare Workers AI `bge-m3` (embeddings)
+
+| Piece | Free allowance | What happens at the limit |
+|---|---|---|
+| Groq `gpt-oss-120b`, fallback `gpt-oss-20b` | Per model: 30 req/min, 1K req/day, 8K tokens/min, 200K tokens/day | Fallback model takes over; then "The AI is busy" |
+| Cloudflare Workers AI `bge-m3` | 10K neurons/day (≈9M embedded tokens) | Search and Echoes pause until 00:00 UTC |
+| Firestore (Spark) | 50K reads, 20K writes/day, 1 GiB | Requests fail until the daily reset |
+| Firebase Auth | Google sign-in, no cap that matters here | — |
+| Vercel Hobby | Non-commercial use | — |
 
 ## Getting started
 
 ```bash
-cp .env.local.example .env.local     # fill in the public Firebase web config
+cp .env.local.example .env.local     # fill in keys — the file explains each one
 npm install
+npm run verify:ai                    # one real call to Groq and Cloudflare
 npm run test:rules                   # 26 isolation tests (needs Java, see below)
 npm run dev
 ```
 
-The Gemini API key does **not** go in `.env.local`. Create it in Secret Manager:
-
-```bash
-printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
-```
-
 `npm run test:rules` needs a JRE — the Firestore emulator is a Java process.
+
+## Deploying for $0
+
+1. Get a Groq key at console.groq.com/keys and a Cloudflare account id + API token with
+   "Workers AI: Read" only. Neither needs a card.
+2. In the Firebase console, generate a service-account key (Project settings → Service accounts).
+3. Import the GitHub repo into Vercel. Add every variable from `.env.local.example` under
+   Project → Settings → Environment Variables. Use base64 for `FIREBASE_SERVICE_ACCOUNT`.
+4. Add the `*.vercel.app` domain to Firebase Auth → Settings → Authorized domains.
+5. Once, after switching embedding models: `npm run reembed`, then `npm run calibrate:echo`
+   and set `ECHO.minScore` in `lib/config.ts` to the midpoint it prints.
 
 ## Scripts
 
@@ -104,9 +118,9 @@ printf 'YOUR_AI_STUDIO_KEY' | gcloud secrets create GEMINI_API_KEY --data-file=-
 | `npm run test:vault` | 14 WebCrypto tests — round trip, wrong key, tampering, non-extractability |
 | `npm run test:rules` | 26 isolation tests against the Firestore emulator (needs Java) |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run verify:cloud` | Read-only check of the whole Google Cloud setup |
 | `npm run verify:contrast` | WCAG AA check of both themes, read from the shipped tokens |
-| `npm run verify:gemini` | Secret Manager to Gemini: chat, structured output, embeddings |
+| `npm run verify:ai` | One real call per request shape: streamed chat, strict summary, embedding |
+| `npm run reembed` | Re-embeds every searchable session with the current model (`-- --dry` to count) |
 | `npm run test:e2e` | Two real users through the whole app, then a leak attempt |
 | `npm run verify:no-secrets` | Scans the built bundle for keys; add `-- --history` to scan every commit |
 | `npm run emulators` | Firestore + Auth emulators for local development |
@@ -123,7 +137,7 @@ pass. See [08 · Submission Map](docs/08-SUBMISSION.md) for requirement-to-line 
 | Authentication | httpOnly session cookies, revocation-checked, no JS-readable credential |
 | Multi-turn AI | Four modes, streamed, with structured auto-summarization |
 | Isolated storage | Path-scoped tenancy, deny-by-default rules, 26 passing isolation tests |
-| Secret management | Runtime Secret Manager retrieval behind a `server-only` build guard |
+| Secret management | Server-only env secrets behind a `server-only` build guard |
 | Zero-Knowledge Vault | Client-side AES-256-GCM, 14 passing crypto tests |
 | Privacy Ledger | Append-only record of every model call, plus real export and delete |
 | Emotional Weather | Mood ribbon and theme constellation from structured output |
@@ -135,11 +149,10 @@ Verified locally, with no model call required: **40 tests green**, clean build, 
 typecheck, route protection, CSRF rejection, forged-cookie rejection, no secrets in the bundle
 or in git history.
 
-Verified **against the live API**: sign-in, streamed multi-turn conversation, structured
-summaries with correct mood polarity, 768-dim embeddings, grounded answers with citations, the
-ledger, export, and bob 404ing on alice's session. Running it for real found five bugs every
-offline check had passed — including a `notFound()` returning HTTP 200. All fixed; details in
-[07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
+Verified **against the live Gemini API** before the move: sign-in, streamed multi-turn
+conversation, structured summaries with correct mood polarity, embeddings, grounded answers with
+citations, the ledger, export, and bob 404ing on alice's session. Running it for real found
+five bugs every offline check had passed — including a `notFound()` returning HTTP 200. All
+fixed; details in [07 · Gate Evidence Log](docs/07-GATE-1-EVIDENCE.md).
 
-Remaining before a demo: **paid Gemini access** (the free-tier daily quota is the only
-blocker) and the Google sign-in Console toggle.
+**Not yet verified on Groq + Cloudflare:** run `npm run verify:ai`, then `npm run test:e2e`.

@@ -1,34 +1,54 @@
 import 'server-only';
 
-import { GoogleGenAI, Type, type Content, type Schema } from '@google/genai';
+import Groq from 'groq-sdk';
 
 import { UNTRUSTED_CONTENT_RULE } from './injection';
 import { log } from './logger';
 import { getSecret } from './secrets';
-import { LIMITS, MODELS, type ConversationMode } from '../config';
+import {
+  LIMITS,
+  MODELS,
+  PROMPT_BUDGET,
+  REASONING_HEADROOM,
+  type ConversationMode,
+} from '../config';
 
 /**
- * The only place in this codebase that talks to Gemini.
+ * The only place in this codebase that talks to a model.
  *
- * The API key is fetched from Secret Manager on first use and cached inside
- * getSecret(). It is never read from an environment variable, never written to
- * a log, and — because of `import 'server-only'` above — cannot be reached
- * from a client component without breaking the build.
+ *   Text (chat, summaries, grounded answers) → Groq, free tier.
+ *   Embeddings (Ask Your Past, Echoes)       → Cloudflare Workers AI, free tier.
+ *
+ * Keys come from the server's environment through getSecret(). They are never
+ * written to a log, and — because of `import 'server-only'` above — this module
+ * cannot be reached from a client component without breaking the build.
  */
 
-let clientPromise: Promise<GoogleGenAI> | null = null;
+let groqClient: Groq | null = null;
 
-async function client(): Promise<GoogleGenAI> {
-  if (!clientPromise) {
-    clientPromise = (async () => {
-      const apiKey = await getSecret(process.env.GEMINI_SECRET_NAME ?? 'GEMINI_API_KEY');
-      return new GoogleGenAI({ apiKey });
-    })().catch((err) => {
-      clientPromise = null; // let the next request retry rather than caching a failure
-      throw err;
-    });
+function groq(): Groq {
+  if (!groqClient) {
+    // maxRetries: 0 because withRetry() below owns retrying. Two retry loops
+    // stacked on each other multiply the wait and hide what actually happened.
+    groqClient = new Groq({ apiKey: getSecret('GROQ_API_KEY'), maxRetries: 0 });
   }
-  return clientPromise;
+  return groqClient;
+}
+
+/** A stored conversation turn. `model` is the app's word for the assistant. */
+export interface Turn {
+  role: 'user' | 'model';
+  content: string;
+}
+
+type Message = Groq.Chat.ChatCompletionMessageParam;
+
+function toMessages(turns: Turn[]): Message[] {
+  return turns.map((t) =>
+    t.role === 'model'
+      ? { role: 'assistant' as const, content: t.content }
+      : { role: 'user' as const, content: t.content },
+  );
 }
 
 // ─── Personas ────────────────────────────────────────────────────────────────
@@ -113,34 +133,49 @@ export function systemInstructionFor(mode: ConversationMode, extra?: string): st
 /**
  * Retry transient failures, honouring what the API asks for.
  *
- * Two things learned from the live API rather than the docs:
+ *   1. Overload (5xx) happens. A single retry usually turns it into a slightly
+ *      slower response.
+ *   2. A 429 says how long to wait — a `retry-after` header, and Groq also
+ *      writes "Please try again in 7.6s" into the message. Backing off 400ms
+ *      against that is pure noise: it burns the retry budget and hits the same
+ *      wall. So we wait what we are told to wait.
  *
- *   1. 503 "This model is currently experiencing high demand" happens. A
- *      single retry usually turns it into a slightly slower response.
- *   2. A 429 carries a RetryInfo with an explicit `retryDelay` — 3s, or 59s
- *      when a per-minute window has to roll over. Backing off 400ms against
- *      that is pure noise: it burns the retry budget and hits the same wall.
- *      So we wait what we are told to wait.
+ * Deliberately narrow: 429, 5xx, and one known-flaky 400 (below). Any other
+ * 400 or a 413 means we sent something the model rejects every time, and
+ * retrying it just spends time to reach the same failure.
  *
- * Deliberately narrow: 429 and 5xx only. A 400 means we sent something the
- * model rejects every time — `thinkingBudget: 0` on 3.6/3.8 does exactly this
- * — and retrying it just spends time to reach the same failure.
- *
- * The wait is capped. If the API asks for 59s, that is a genuine quota wall,
- * and holding a request handler open for a minute serves nobody: fail fast and
- * let the caller see an honest "the model is busy" instead.
+ * The wait is capped. If the API asks for a minute, that is a genuine quota
+ * wall, and holding a request handler open that long serves nobody: fail fast
+ * and let the caller see an honest "the model is busy" instead.
  */
 const MAX_BACKOFF_MS = 8_000;
 
+/** An HTTP failure from a provider we call with plain fetch (Cloudflare). */
+class ProviderHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly retryAfterMs: number | null,
+  ) {
+    super(`PROVIDER_HTTP_${status}`);
+    this.name = 'ProviderHttpError';
+  }
+}
+
 /**
- * Pull the HTTP status out of an SDK error without depending on its shape.
+ * Pull the HTTP status out of a provider error without depending on its shape.
  *
- * Prefers the structured "code": NNN that the API actually returns. The loose
- * fallback is anchored on word boundaries deliberately - an unanchored
- * three-digit match over an error string will happily pick three digits out of
- * a token count or a timestamp and report a 429 that never happened.
+ * Prefers a numeric `status` property (the Groq SDK and ProviderHttpError both
+ * carry one). The loose text fallback is anchored on word boundaries
+ * deliberately — an unanchored three-digit match over an error string will
+ * happily pick three digits out of a token count and report a 429 that never
+ * happened.
  */
 export function errorStatus(err: unknown): number | null {
+  if (err && typeof err === 'object' && 'status' in err) {
+    const status = (err as { status: unknown }).status;
+    if (typeof status === 'number') return status;
+  }
+
   const text = String(err);
 
   const structured = /"code"\s*:\s*(\d{3})\b/.exec(text);
@@ -152,8 +187,26 @@ export function errorStatus(err: unknown): number | null {
 
 /** The API tells us how long to wait. Believe it. */
 function suggestedDelayMs(err: unknown): number | null {
-  const m = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(String(err));
-  return m ? Math.round(Number(m[1]) * 1000) : null;
+  if (err instanceof ProviderHttpError) return err.retryAfterMs;
+
+  const headers = (err as { headers?: unknown } | null)?.headers;
+  if (headers && typeof (headers as Headers).get === 'function') {
+    const parsed = parseRetryAfter((headers as Headers).get('retry-after'));
+    if (parsed !== null) return parsed;
+  }
+
+  // "Please try again in 1m2.5s" / "in 7.66s" / "in 450ms"
+  const m = /try again in (?:(\d+)m)?(\d+(?:\.\d+)?)(ms|s)\b/i.exec(String(err));
+  if (!m) return null;
+  const minutes = m[1] ? Number(m[1]) : 0;
+  const amount = Number(m[2]);
+  return Math.round(minutes * 60_000 + (m[3] === 'ms' ? amount : amount * 1000));
+}
+
+function parseRetryAfter(value: string | null): number | null {
+  if (!value) return null;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? Math.round(seconds * 1000) : null;
 }
 
 export class ProviderBusy extends Error {
@@ -172,23 +225,27 @@ async function withRetry<T>(label: string, fn: () => Promise<T>, attempts = 3): 
     } catch (err) {
       lastError = err;
       const status = errorStatus(err);
-      const text = String(err);
       const transient =
         status === 429 ||
         (status !== null && status >= 500) ||
-        /high demand|overloaded|UNAVAILABLE|DEADLINE_EXCEEDED/i.test(text);
+        /overloaded|over capacity|UNAVAILABLE|timed? ?out/i.test(String(err)) ||
+        // Groq rejects a strict-mode generation that came out short with a 400
+        // ("Generated JSON does not match the expected schema"). Measured on
+        // gpt-oss-20b: 1 run in 4 on the real insight schema, and the same
+        // request then succeeds. A bad sample, not a bad request — retry it.
+        /does not match the expected schema|failed_generation/i.test(String(err));
 
       if (!transient || i === attempts - 1) break;
 
       const asked = suggestedDelayMs(err);
       if (asked !== null && asked > MAX_BACKOFF_MS) {
         // A wall, not a blip. Stop rather than hold the request open.
-        log.warn('gemini_quota_wall', { reason: label, status, durationMs: asked });
+        log.warn('ai_quota_wall', { reason: label, status, durationMs: asked });
         break;
       }
 
       const backoff = asked ?? 800 * 3 ** i + Math.random() * 400;
-      log.warn('gemini_retry', {
+      log.warn('ai_retry', {
         reason: label,
         status,
         count: i + 1,
@@ -202,13 +259,13 @@ async function withRetry<T>(label: string, fn: () => Promise<T>, attempts = 3): 
   // it as one would send the user a generic 500 for something they can simply
   // retry in a moment.
   if (errorStatus(lastError) === 429) {
-    log.warn('gemini_rate_limited', { reason: label, status: 429 });
+    log.warn('ai_rate_limited', { reason: label, status: 429 });
     throw new ProviderBusy();
   }
   throw lastError;
 }
 
-// ─── Token estimation ────────────────────────────────────────────────────────
+// ─── Token estimation and prompt budgets ─────────────────────────────────────
 
 /**
  * Rough pre-flight estimate for the quota check, intentionally pessimistic.
@@ -218,6 +275,31 @@ async function withRetry<T>(label: string, fn: () => Promise<T>, attempts = 3): 
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3.5);
 }
+
+/**
+ * Keep the newest turns that fit `budget` estimated tokens.
+ *
+ * Groq's free tier refuses any single request larger than its per-minute
+ * token limit — it does not queue it, it rejects it. A long session would
+ * otherwise go from working to permanently broken at one particular message.
+ * The newest turn is always kept: it is the one being answered.
+ */
+export function fitTurns(turns: Turn[], budget: number): { kept: Turn[]; dropped: number } {
+  let total = 0;
+  let start = turns.length;
+  while (start > 0) {
+    const cost = estimateTokens(turns[start - 1]!.content);
+    if (total + cost > budget && start < turns.length) break;
+    total += cost;
+    start--;
+  }
+  return { kept: turns.slice(start), dropped: start };
+}
+
+const HISTORY_TRIMMED_NOTE = `
+The earliest part of this conversation is not shown to you because of length.
+If the user refers to something you cannot see, say so plainly rather than
+guessing at what was said.`.trim();
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
@@ -253,7 +335,7 @@ async function withFallback<T>(
     return { value: await withRetry(label, () => run(primary)), model: primary };
   } catch (err) {
     if (!(err instanceof ProviderBusy) || fallback === primary) throw err;
-    log.warn('gemini_fallback', { reason: label, model: fallback });
+    log.warn('ai_fallback', { reason: label, model: fallback });
     return {
       value: await withRetry(`${label}:fallback`, () => run(fallback)),
       model: fallback,
@@ -262,39 +344,23 @@ async function withFallback<T>(
 }
 
 /**
- * Stream a conversation turn.
+ * Settings shared by every streamed reply.
  *
- * `contents` must already be uid-scoped history loaded from Firestore. Never
- * pass client-supplied history straight through — see the note in
- * lib/shared/schemas.ts.
+ * gpt-oss always reasons first. "low" effort keeps a journaling reply
+ * immediate, `include_reasoning: false` keeps the reasoning out of the text the
+ * user sees, and the headroom stops reasoning tokens from truncating the
+ * answer — they count against max_completion_tokens.
  */
-export async function streamChat(
-  mode: ConversationMode,
-  contents: Content[],
-  signal?: AbortSignal,
-): Promise<StreamResult> {
-  const ai = await client();
+const REPLY_SETTINGS = {
+  max_completion_tokens: LIMITS.maxOutputTokens + REASONING_HEADROOM,
+  reasoning_effort: 'low',
+  include_reasoning: false,
+} as const;
 
-  const { value: response, model } = await withFallback(
-    'chat',
-    MODELS.chat,
-    MODELS.chatFallback,
-    (m) =>
-      ai.models.generateContentStream({
-        model: m,
-        contents,
-        config: {
-          systemInstruction: systemInstructionFor(mode),
-          maxOutputTokens: LIMITS.maxOutputTokens,
-          temperature: 0.9,
-          // Conversation should feel immediate. A journaling reply does not
-          // need the model to deliberate first.
-          thinkingConfig: { thinkingBudget: 0 },
-          abortSignal: signal,
-        },
-      }),
-  );
-
+function toStreamResult(
+  response: AsyncIterable<Groq.Chat.ChatCompletionChunk>,
+  model: string,
+): StreamResult {
   let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
   const usage = new Promise<{ inputTokens: number; outputTokens: number }>((r) => {
     resolveUsage = r;
@@ -305,12 +371,13 @@ export async function streamChat(
     let outputTokens = 0;
     try {
       for await (const chunk of response) {
-        const meta = chunk.usageMetadata;
+        // Groq reports usage on the final chunk, under x_groq.
+        const meta = chunk.x_groq?.usage;
         if (meta) {
-          inputTokens = meta.promptTokenCount ?? inputTokens;
-          outputTokens = meta.candidatesTokenCount ?? outputTokens;
+          inputTokens = meta.prompt_tokens ?? inputTokens;
+          outputTokens = meta.completion_tokens ?? outputTokens;
         }
-        const text = chunk.text;
+        const text = chunk.choices[0]?.delta?.content;
         if (text) yield text;
       }
     } finally {
@@ -321,9 +388,40 @@ export async function streamChat(
   return { stream: iterate(), usage, model };
 }
 
-/** Convert stored turns into the SDK's Content shape. */
-export function toContents(turns: { role: 'user' | 'model'; content: string }[]): Content[] {
-  return turns.map((t) => ({ role: t.role, parts: [{ text: t.content }] }));
+/**
+ * Stream a conversation turn.
+ *
+ * `turns` must already be uid-scoped history loaded from Firestore. Never pass
+ * client-supplied history straight through — see the note in
+ * lib/shared/schemas.ts.
+ */
+export async function streamChat(
+  mode: ConversationMode,
+  turns: Turn[],
+  signal?: AbortSignal,
+): Promise<StreamResult> {
+  const client = groq();
+  const { kept, dropped } = fitTurns(turns, PROMPT_BUDGET.chat);
+  const system = systemInstructionFor(mode, dropped > 0 ? HISTORY_TRIMMED_NOTE : undefined);
+
+  const { value: response, model } = await withFallback(
+    'chat',
+    MODELS.chat,
+    MODELS.chatFallback,
+    (m) =>
+      client.chat.completions.create(
+        {
+          model: m,
+          messages: [{ role: 'system', content: system }, ...toMessages(kept)],
+          temperature: 0.9,
+          stream: true,
+          ...REPLY_SETTINGS,
+        },
+        { signal },
+      ),
+  );
+
+  return toStreamResult(response, model);
 }
 
 // ─── Session summary (structured output) ─────────────────────────────────────
@@ -335,30 +433,33 @@ export function toContents(turns: { role: 'user' | 'model'; content: string }[])
  * constellation, and the input to the weekly chapter. Asking for structured
  * output rather than prose means no parsing, no "sometimes it adds a preamble",
  * and typed data straight into Firestore.
+ *
+ * Groq's strict mode uses constrained decoding, which needs every property
+ * listed in `required` and `additionalProperties: false` on every object.
  */
-const INSIGHT_SCHEMA: Schema = {
-  type: Type.OBJECT,
+const INSIGHT_SCHEMA = {
+  type: 'object',
   properties: {
-    title: { type: Type.STRING, description: 'Three to six words. No colon, no quotes.' },
+    title: { type: 'string', description: 'Three to six words. No colon, no quotes.' },
     summary: {
-      type: Type.STRING,
+      type: 'string',
       description: 'Two or three sentences, second person, plain language.',
     },
     bullets: {
-      type: Type.ARRAY,
+      type: 'array',
       description: 'Three to five key points, each one short sentence.',
-      items: { type: Type.STRING },
+      items: { type: 'string' },
     },
     openLoops: {
-      type: Type.ARRAY,
+      type: 'array',
       description: 'Unresolved threads worth returning to. Empty array if none.',
-      items: { type: Type.STRING },
+      items: { type: 'string' },
     },
     mood: {
-      type: Type.OBJECT,
+      type: 'object',
       properties: {
         valence: {
-          type: Type.NUMBER,
+          type: 'number',
           description:
             'How the session FELT, from -1 to 1. NEGATIVE for heavy, difficult, ' +
             'anxious, sad, frustrated or draining. POSITIVE for light, hopeful, ' +
@@ -366,48 +467,48 @@ const INSIGHT_SCHEMA: Schema = {
             'worried session MUST be negative even if something went well in it.',
         },
         energy: {
-          type: Type.NUMBER,
+          type: 'number',
           description:
             'How activated the session felt, 0 to 1. 0 is flat, numb or exhausted; ' +
             '1 is charged, urgent or intense. Independent of whether it felt good.',
         },
-        label: { type: Type.STRING, description: 'One or two words for the feeling.' },
+        label: { type: 'string', description: 'One or two words for the feeling.' },
       },
       required: ['valence', 'energy', 'label'],
-      propertyOrdering: ['valence', 'energy', 'label'],
+      additionalProperties: false,
     },
     emotions: {
-      type: Type.ARRAY,
+      type: 'array',
       description: 'Up to four, strongest first.',
       items: {
-        type: Type.OBJECT,
+        type: 'object',
         properties: {
-          name: { type: Type.STRING },
-          intensity: { type: Type.NUMBER, description: '0 … 1' },
+          name: { type: 'string' },
+          intensity: { type: 'number', description: '0 … 1' },
         },
         required: ['name', 'intensity'],
-        propertyOrdering: ['name', 'intensity'],
+        additionalProperties: false,
       },
     },
     themes: {
-      type: Type.ARRAY,
+      type: 'array',
       description: 'Two to five lowercase single-word or hyphenated tags.',
-      items: { type: Type.STRING },
+      items: { type: 'string' },
     },
     entities: {
-      type: Type.ARRAY,
+      type: 'array',
       items: {
-        type: Type.OBJECT,
+        type: 'object',
         properties: {
-          name: { type: Type.STRING },
-          type: { type: Type.STRING, enum: ['person', 'place', 'project', 'concept'] },
+          name: { type: 'string' },
+          type: { type: 'string', enum: ['person', 'place', 'project', 'concept'] },
         },
         required: ['name', 'type'],
-        propertyOrdering: ['name', 'type'],
+        additionalProperties: false,
       },
     },
     suggestedExperiment: {
-      type: Type.STRING,
+      type: 'string',
       description: 'One small, concrete thing to try. A sentence.',
     },
   },
@@ -422,18 +523,8 @@ const INSIGHT_SCHEMA: Schema = {
     'entities',
     'suggestedExperiment',
   ],
-  propertyOrdering: [
-    'title',
-    'summary',
-    'bullets',
-    'openLoops',
-    'mood',
-    'emotions',
-    'themes',
-    'entities',
-    'suggestedExperiment',
-  ],
-};
+  additionalProperties: false,
+} as const;
 
 const SUMMARIZE_INSTRUCTION = `
 You are closing out a journaling session. Read the conversation and distil it.
@@ -449,7 +540,25 @@ suggested experiment should be small enough to do tomorrow.
 Themes are for grouping sessions over months, so keep them general and reusable:
 "work", "sleep", "family", "creative-block" — not "tuesday-standup".
 
+Reply with the JSON object only.
+
 ${SAFETY_CLAUSE}`.trim();
+
+/**
+ * Fit a whole session into the summary budget.
+ *
+ * Keeps the opening message (it usually says what the session is about) and
+ * as much of the end as fits. The model is told a gap exists, so it does not
+ * paper over it.
+ */
+function fitSession(turns: Turn[]): { kept: Turn[]; omitted: number } {
+  const [first, ...rest] = turns;
+  if (!first) return { kept: [], omitted: 0 };
+
+  const remaining = PROMPT_BUDGET.summary - estimateTokens(first.content);
+  const { kept, dropped } = fitTurns(rest, Math.max(remaining, 0));
+  return { kept: [first, ...kept], omitted: dropped };
+}
 
 export interface SummaryResult {
   raw: unknown;
@@ -464,51 +573,59 @@ export interface SummaryResult {
  * runs it through a Zod schema, because a schema-constrained model is a strong
  * expectation and not a guarantee.
  */
-export async function summarizeSession(
-  turns: { role: 'user' | 'model'; content: string }[],
-): Promise<SummaryResult> {
-  const ai = await client();
+export async function summarizeSession(turns: Turn[]): Promise<SummaryResult> {
+  const client = groq();
+  const { kept, omitted } = fitSession(turns);
+
+  const system =
+    omitted > 0
+      ? `${SUMMARIZE_INSTRUCTION}\n\n${omitted} messages from the middle of this session ` +
+        'were left out for length. Summarise what you can see and do not guess at the gap.'
+      : SUMMARIZE_INSTRUCTION;
 
   const { value: response, model } = await withFallback(
     'summarize',
     MODELS.synthesis,
     MODELS.synthesisFallback,
     (m) =>
-      ai.models.generateContent({
+      client.chat.completions.create({
         model: m,
-        contents: toContents(turns),
-        config: {
-          systemInstruction: SUMMARIZE_INSTRUCTION,
-          responseMimeType: 'application/json',
-          responseSchema: INSIGHT_SCHEMA,
-          temperature: 0.4,
-          maxOutputTokens: 1600,
+        messages: [{ role: 'system', content: system }, ...toMessages(kept)],
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: 'session_insights', strict: true, schema: INSIGHT_SCHEMA },
         },
+        temperature: 0.4,
+        max_completion_tokens: 1600 + REASONING_HEADROOM,
+        reasoning_effort: 'low',
+        include_reasoning: false,
       }),
   );
 
-  const text = response.text;
+  const text = response.choices[0]?.message?.content;
   if (!text) throw new Error('EMPTY_SUMMARY');
 
   return {
     raw: JSON.parse(text),
-    inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+    inputTokens: response.usage?.prompt_tokens ?? 0,
+    outputTokens: response.usage?.completion_tokens ?? 0,
     model,
   };
 }
 
-// ─── Embeddings (Ask Your Past) ──────────────────────────────────────────────
-
-/** Dimensionality we store. Smaller than the model's default; see normalise(). */
-export const EMBED_DIMS = 768;
+// ─── Embeddings (Ask Your Past, Echoes) ──────────────────────────────────────
 
 /**
- * gemini-embedding-001 returns unit-normalised vectors only at its native
- * 3072 dimensions. At any smaller output size the vector must be normalised by
- * the caller — otherwise cosine similarity silently degrades into something
- * that mostly measures magnitude.
+ * Dimensionality bge-m3 produces.
+ *
+ * Vectors written by the previous model (768 dims) still sit in Firestore
+ * until `npm run reembed` replaces them. cosine() in retrieval.ts returns -1
+ * for mismatched lengths, so an old vector can never produce a false match —
+ * it simply is not found until it is re-embedded.
  */
+export const EMBED_DIMS = 1024;
+
+/** Unit-normalise so that a dot product is the cosine. Cheap insurance. */
 function normalise(values: number[]): number[] {
   let sum = 0;
   for (const v of values) sum += v * v;
@@ -522,30 +639,40 @@ export interface EmbedResult {
   inputTokens: number;
 }
 
+const EMBED_TIMEOUT_MS = 15_000;
+
 /**
- * Embed one piece of text.
+ * Embed one piece of text with Cloudflare Workers AI.
  *
- * `taskType` is not decoration: the model produces different vectors for a
- * document being stored and a question being asked, and matching them up is
- * what makes retrieval work. Using the same task type for both measurably
- * hurts results.
+ * bge-m3 is symmetric for dense retrieval: a stored summary and a question are
+ * embedded the same way, with no task instruction. (Gemini needed a task type;
+ * this model does not, and adding a prefix it was not trained with hurts.)
  */
-export async function embed(
-  text: string,
-  taskType: 'RETRIEVAL_DOCUMENT' | 'RETRIEVAL_QUERY',
-): Promise<EmbedResult> {
-  const ai = await client();
+export async function embed(text: string): Promise<EmbedResult> {
+  const accountId = getSecret('CLOUDFLARE_ACCOUNT_ID');
+  const token = getSecret('CLOUDFLARE_API_TOKEN');
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODELS.embedding}`;
 
-  const res = await withRetry('embed', () =>
-    ai.models.embedContent({
-      model: MODELS.embedding,
-      contents: text,
-      config: { outputDimensionality: EMBED_DIMS, taskType },
-    }),
-  );
+  const values = await withRetry('embed', async () => {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: [text], truncate_inputs: true }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    });
 
-  const values = res.embeddings?.[0]?.values;
+    if (!res.ok) {
+      throw new ProviderHttpError(res.status, parseRetryAfter(res.headers.get('retry-after')));
+    }
+
+    const body = (await res.json()) as {
+      result?: { data?: number[][]; response?: number[][] };
+    };
+    return body.result?.data?.[0] ?? body.result?.response?.[0];
+  });
+
   if (!values?.length) throw new Error('EMBED_EMPTY');
+  if (values.length !== EMBED_DIMS) throw new Error('EMBED_SHAPE');
 
   return { values: normalise(values), inputTokens: estimateTokens(text) };
 }
@@ -576,53 +703,27 @@ export async function streamGroundedAnswer(
   context: string,
   signal?: AbortSignal,
 ): Promise<StreamResult> {
-  const ai = await client();
+  const client = groq();
 
   const { value: response, model } = await withFallback(
     'ask',
     MODELS.chat,
     MODELS.chatFallback,
     (m) =>
-      ai.models.generateContentStream({
-        model: m,
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: `${context}\n\nQuestion: ${question}` }],
-          },
-        ],
-        config: {
-          systemInstruction: ASK_INSTRUCTION,
-          maxOutputTokens: LIMITS.maxOutputTokens,
+      client.chat.completions.create(
+        {
+          model: m,
+          messages: [
+            { role: 'system', content: ASK_INSTRUCTION },
+            { role: 'user', content: `${context}\n\nQuestion: ${question}` },
+          ],
           temperature: 0.3,
-          thinkingConfig: { thinkingBudget: 0 },
-          abortSignal: signal,
+          stream: true,
+          ...REPLY_SETTINGS,
         },
-      }),
+        { signal },
+      ),
   );
 
-  let resolveUsage!: (u: { inputTokens: number; outputTokens: number }) => void;
-  const usage = new Promise<{ inputTokens: number; outputTokens: number }>((r) => {
-    resolveUsage = r;
-  });
-
-  async function* iterate(): AsyncGenerator<string> {
-    let inputTokens = 0;
-    let outputTokens = 0;
-    try {
-      for await (const chunk of response) {
-        const meta = chunk.usageMetadata;
-        if (meta) {
-          inputTokens = meta.promptTokenCount ?? inputTokens;
-          outputTokens = meta.candidatesTokenCount ?? outputTokens;
-        }
-        const text = chunk.text;
-        if (text) yield text;
-      }
-    } finally {
-      resolveUsage({ inputTokens, outputTokens });
-    }
-  }
-
-  return { stream: iterate(), usage, model };
+  return toStreamResult(response, model);
 }

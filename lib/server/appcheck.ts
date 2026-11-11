@@ -10,7 +10,7 @@ import { log } from './logger';
  * Answers a question authentication cannot: is this request coming from OUR
  * app, or from a script someone wrote against our API? A valid session cookie
  * proves who you are; it says nothing about what is making the call. Without
- * attestation, a signed-in user can trivially drive our Gemini endpoints from
+ * attestation, a signed-in user can trivially drive our model endpoints from
  * curl in a loop.
  *
  * ── ENFORCEMENT IS OPT-IN ──

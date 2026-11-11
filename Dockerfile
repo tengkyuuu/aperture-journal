@@ -15,7 +15,7 @@ COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the CLIENT bundle at BUILD time, so
 # they must be present here rather than only at runtime. They are public config
-# by design — see apphosting.yaml for why that is not a leak.
+# by design — see .env.local.example for why that is not a leak.
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID

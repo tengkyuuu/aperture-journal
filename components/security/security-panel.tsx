@@ -13,7 +13,7 @@ import { Notice } from '@/components/feedback/notice';
  * The Security page.
  *
  * The point of this page is that it is boring and complete. Every call this
- * server made to Gemini on your behalf is here, with what was sent and what it
+ * server made to a model provider on your behalf is here, with what was sent and what it
  * cost. Most products will not tell you this because most products would
  * rather you did not think about it.
  */
@@ -106,12 +106,13 @@ export function SecurityPanel({
               <Stat
                 label="Est. cost"
                 value={totalCost < 0.01 ? '<$0.01' : `$${totalCost.toFixed(2)}`}
-                sub="estimate, not a bill"
+                sub="at paid rates · free tier bills $0"
               />
             </div>
 
             <p className="prose-journal mt-5 text-ink-2">
-              {calls.length === 1 ? 'One request' : `${calls.length} requests`} went to Gemini.
+              {calls.length === 1 ? 'One request' : `${calls.length} requests`} went to the
+              model providers — Groq for writing, Cloudflare for search.
               Each one carried {DATA_CLASS_COPY[calls[0]?.dataClasses[0] ?? ''] ?? 'session content'}{' '}
               and nothing else — no account identifiers, no email address, and nothing from any
               other session.

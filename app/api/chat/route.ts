@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { requireUid } from '@/lib/server/auth';
 import { assertRequestIntegrity, parseBody, toErrorResponse } from '@/lib/server/http';
 import { assertSafeId, messagesCol, sessionDoc, sessionsCol } from '@/lib/server/db';
-import { estimateTokens, streamChat, toContents } from '@/lib/server/gemini';
+import { estimateTokens, streamChat } from '@/lib/server/ai';
 import { scanForInjection } from '@/lib/server/injection';
 import { recordAiCall, recordSecurityEvent } from '@/lib/server/ledger';
 import { consumeQuota, settleQuota } from '@/lib/server/ratelimit';
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
     // ─── Stream ─────────────────────────────────────────────────────────────
     // `model` is what actually answered — the fallback if the primary was
     // rate-limited. The ledger records that, not what we asked for.
-    const { stream, usage, model } = await streamChat(body.mode, toContents(turns), req.signal);
+    const { stream, usage, model } = await streamChat(body.mode, turns, req.signal);
 
     const encoder = new TextEncoder();
     let full = '';
@@ -122,9 +122,9 @@ export async function POST(req: Request) {
      * none of it: the user's turn was already on disk (it is written before
      * the first token), but the model turn, the messageCount, the quota
      * settlement and — worst — the LEDGER ROW were all skipped. That call
-     * reached Gemini and spent tokens. A stopped generation that leaves no
+     * reached the model and spent tokens. A stopped generation that leaves no
      * ledger row would quietly falsify the claim the Security page makes in
-     * writing: "every call this app makes to Gemini on your behalf is
+     * writing: "every call this app makes to an AI model on your behalf is
      * recorded here." So `cancel()` calls this too.
      */
     let settled = false;
