@@ -1,151 +1,129 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PAPER CUT — neo-brutalism for a journal
-   Contract: docs/05-UI-UX-SPEC.md
+   THE LEXICON — Aperture set like a reference book you are writing.
+   Direction contract: .impeccable/surfaces/app.md · System: DESIGN.md
 
-   The brief: neo-brutalism, pixels, human interaction. The constraint nobody
-   asks for but every journal has: people write difficult things here. So this
-   is the HANDMADE ZINE end of brutalism — cream stock, thick ink borders,
-   stickers slightly askew, satisfying mechanical presses — and not the
-   shouting-banner-ad end. Chunky and warm, not aggressive.
+   Four rules carry the whole system:
+     · Rank by apparatus, not by size. Three sizes only — 13 / 17 / 27px —
+       and hierarchy from weight, italic, capitals and rules.
+     · Guide words at the head of every list of entries.
+     · Colour lives inside plates. Pages are ink on stock; the plate inks
+       appear only in bordered figures and mood marks. One exception, rubric,
+       marks what is new until it has been seen.
+     · Controls are printed marks: square, ink-bordered, no shadows. The
+       primary action is printed reverse.
 
-   System rules taken from the design database, not invented:
-     · 3–4px ink borders on every major element
-     · hard offset shadows, 4–8px, ZERO blur
-     · mechanical press: translate by exactly the shadow offset, shadow to 0
-     · cards rotated ±1–2deg so the page feels hand-assembled
-     · high-saturation colour blocking, no gradients
-     · spring or linear easing only — nothing that eases out softly
-
-   Token NAMES are unchanged from the previous system on purpose: the values
-   move, every component follows, and the diff stays readable.
+   Token NAMES are unchanged from the previous system on purpose: every
+   component follows the values, and the diff stays readable.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* ── Primitives ─────────────────────────────────────────────────────────── */
+/* ── Semantic: DAY (complete set on bare :root) ─────────────────────────── */
 :root {
-  /* Ground: warm newsprint cream, never white. White reads as a form. */
-  --paper-0: #fffcf2;
-  --paper-1: #ffffff;
-  --paper-2: #f5f0e1;
-  --paper-3: #e8e1cd;
+  --bg-canvas: #ebeeec; /* stock: cool bible paper */
+  --bg-surface: #ebeeec; /* plates are printed on the same stock */
+  --bg-elevated: #ebeeec; /* a loose sheet is still stock; the shadow lifts it */
+  --bg-sunken: #dfe2e0; /* stock-sunk: shoulder, writing well, hover */
 
-  --ink-0: #111111;
-  --ink-1: #2e2e2e;
-  --ink-2: #5c5c5c;
+  --border-ink: #1a1c1d;
+  --line-subtle: #979c9a; /* rule-faint: decorative hairlines only */
+  --line-strong: #1a1c1d;
 
-  /* The pops. Saturated, unapologetic, used as FILLS with ink text on top —
-     which is how brutalism keeps loud colour accessible. */
-  --pop-blue: #4d5bf9;
-  --pop-blue-lift: #9aa5ff;
-  --pop-yellow: #ffd400;
-  --pop-orange: #ff6b35;
-  --pop-mint: #00c48c;
-  --pop-rose: #ff4d6d;
-  --pop-red: #ff3b30;
-}
+  --fg-primary: #1a1c1d; /* ink */
+  --fg-secondary: #434847; /* ink-2 */
+  --fg-muted: #5b6160; /* ink-3 */
+  --fg-on-accent: #ebeeec; /* on-ink */
 
-/* ── Semantic: LIGHT (complete set on bare :root) ───────────────────────── */
-:root {
-  --bg-canvas: var(--paper-0);
-  --bg-surface: var(--paper-1);
-  --bg-elevated: var(--paper-1);
-  --bg-sunken: var(--paper-2);
+  /* "Accent" is now printed reverse: ink. Selected states fill with ink. */
+  --accent: #1a1c1d;
+  --accent-wash: #dfe2e0;
 
-  /* The border IS the design. One ink colour, one weight, everywhere. */
-  --border-ink: var(--ink-0);
-  --line-subtle: var(--ink-0);
-  --line-strong: var(--ink-0);
-
-  --fg-primary: var(--ink-0);
-  --fg-secondary: var(--ink-1);
-  --fg-muted: var(--ink-2);
-  --fg-on-accent: #ffffff;
-
-  --accent: var(--pop-blue);
-  --accent-wash: #e4e6ff;
-  --pop: var(--pop-yellow);
-  --sealed: var(--pop-orange);
-  --danger: var(--pop-red);
-  --positive: #00a074;
-  --negative: #e93357;
+  --rubric: #b23a16; /* new, until seen */
+  --pop: #c98f0a; /* plate-chrome: fill only, always edged in ink */
+  --sealed: #6e4a2b; /* plate-sepia */
+  --danger: #b23a16; /* destructive: said in rubric, never a red fill */
+  --positive: #1c6e4c; /* plate-emerald — lighter */
+  --negative: #a82e58; /* plate-madder — heavier */
+  --level: #56419e; /* plate-violet — about level */
+  --plate-ultramarine: #2a3a94;
 
   --mood-tint: none;
 
-  /* Hard shadows. No blur, ever. The offset is also the press distance. */
-  --brut-offset: 4px;
-  --shadow-brut: 4px 4px 0 0 var(--border-ink);
-  --shadow-brut-lg: 7px 7px 0 0 var(--border-ink);
-  --shadow-ambient: var(--shadow-brut);
+  --shadow-brut: none;
+  --shadow-brut-lg: none;
+  --shadow-ambient: none;
+  /* The one shadow: a loose sheet lying on the page. */
+  --shadow-sheet: 0 1px 0 #1a1c1d, 0 16px 40px rgba(26, 28, 29, 0.18);
 
   color-scheme: light;
 }
 
-/* ── Semantic: DARK via system preference ───────────────────────────────── */
-/* The database rates neo-brutalism "light-first, weak dark support". So this
-   is not an inversion: the ground goes to ink, the BORDERS go to paper, and
-   every pop is lifted until it clears 4.5:1 on a dark ground. */
+/* ── Semantic: NIGHT via system preference ──────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-canvas: #141414;
-    --bg-surface: #1e1e1e;
-    --bg-elevated: #262626;
-    --bg-sunken: #0e0e0e;
+    --bg-canvas: #131517;
+    --bg-surface: #131517;
+    --bg-elevated: #131517;
+    --bg-sunken: #1b1e21;
 
-    --border-ink: #f5f0e1;
-    --line-subtle: #f5f0e1;
-    --line-strong: #f5f0e1;
+    --border-ink: #e6e8e6;
+    --line-subtle: #50555a;
+    --line-strong: #e6e8e6;
 
-    --fg-primary: #fffcf2;
-    --fg-secondary: #d6d2c6;
-    --fg-muted: #a09b8e;
-    --fg-on-accent: #111111;
+    --fg-primary: #e6e8e6;
+    --fg-secondary: #b4b9b8;
+    --fg-muted: #8d9392;
+    --fg-on-accent: #131517;
 
-    --accent: var(--pop-blue-lift);
-    --accent-wash: #23264a;
-    --pop: var(--pop-yellow);
-    --sealed: #ff8b5e;
-    --danger: #ff6b62;
-    --positive: #2ee0a8;
-    --negative: #ff7a94;
+    --accent: #e6e8e6;
+    --accent-wash: #1b1e21;
 
-    --shadow-brut: 4px 4px 0 0 var(--border-ink);
-    --shadow-brut-lg: 7px 7px 0 0 var(--border-ink);
-    --shadow-ambient: var(--shadow-brut);
+    --rubric: #f08257;
+    --pop: #edbe48;
+    --sealed: #c99b6c;
+    --danger: #f08257;
+    --positive: #4fd19b;
+    --negative: #f07da2;
+    --level: #ac97f2;
+    --plate-ultramarine: #93a6f6;
+
+    --shadow-sheet: 0 1px 0 #e6e8e6, 0 16px 40px rgba(0, 0, 0, 0.55);
 
     color-scheme: dark;
   }
 }
 
-/* ── Semantic: DARK via explicit choice ─────────────────────────────────── */
+/* ── Semantic: NIGHT via explicit choice ────────────────────────────────── */
 :root[data-theme="dark"] {
-  --bg-canvas: #141414;
-  --bg-surface: #1e1e1e;
-  --bg-elevated: #262626;
-  --bg-sunken: #0e0e0e;
+  --bg-canvas: #131517;
+  --bg-surface: #131517;
+  --bg-elevated: #131517;
+  --bg-sunken: #1b1e21;
 
-  --border-ink: #f5f0e1;
-  --line-subtle: #f5f0e1;
-  --line-strong: #f5f0e1;
+  --border-ink: #e6e8e6;
+  --line-subtle: #50555a;
+  --line-strong: #e6e8e6;
 
-  --fg-primary: #fffcf2;
-  --fg-secondary: #d6d2c6;
-  --fg-muted: #a09b8e;
-  --fg-on-accent: #111111;
+  --fg-primary: #e6e8e6;
+  --fg-secondary: #b4b9b8;
+  --fg-muted: #8d9392;
+  --fg-on-accent: #131517;
 
-  --accent: var(--pop-blue-lift);
-  --accent-wash: #23264a;
-  --pop: var(--pop-yellow);
-  --sealed: #ff8b5e;
-  --danger: #ff6b62;
-  --positive: #2ee0a8;
-  --negative: #ff7a94;
+  --accent: #e6e8e6;
+  --accent-wash: #1b1e21;
 
-  --shadow-brut: 4px 4px 0 0 var(--border-ink);
-  --shadow-brut-lg: 7px 7px 0 0 var(--border-ink);
-  --shadow-ambient: var(--shadow-brut);
+  --rubric: #f08257;
+  --pop: #edbe48;
+  --sealed: #c99b6c;
+  --danger: #f08257;
+  --positive: #4fd19b;
+  --negative: #f07da2;
+  --level: #ac97f2;
+  --plate-ultramarine: #93a6f6;
+
+  --shadow-sheet: 0 1px 0 #e6e8e6, 0 16px 40px rgba(0, 0, 0, 0.55);
 
   color-scheme: dark;
 }
@@ -159,6 +137,7 @@
 
   --color-line: var(--border-ink);
   --color-line-strong: var(--border-ink);
+  --color-line-faint: var(--line-subtle);
 
   --color-ink: var(--fg-primary);
   --color-ink-2: var(--fg-secondary);
@@ -167,42 +146,29 @@
 
   --color-accent: var(--accent);
   --color-accent-wash: var(--accent-wash);
+  --color-rubric: var(--rubric);
   --color-pop: var(--pop);
   --color-sealed: var(--sealed);
   --color-danger: var(--danger);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
+  --color-level: var(--level);
+  --color-ultramarine: var(--plate-ultramarine);
 
-  /* `font-serif` now resolves to the display face. The token name is kept so
-     the whole component tree moves with one edit instead of fifty. */
-  --font-serif: var(--font-space-grotesk), "Arial Black", sans-serif;
-  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --font-pixel: var(--font-silkscreen), var(--font-jetbrains), monospace;
+  /* One family for everything: a nineteenth-century reference-book face. */
+  --font-serif: var(--font-text), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: var(--font-text), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  --font-pixel: var(--font-text), Georgia, serif;
 
-  /* Chunky, not soft. Brutalism tolerates a small radius; it does not tolerate
-     a pill. */
-  --radius-control: 4px;
-  --radius-card: 6px;
-  --radius-sheet: 8px;
+  /* Square. The only round things are the mood mark and the footnote mark. */
+  --radius-control: 0px;
+  --radius-card: 0px;
+  --radius-sheet: 0px;
 
-  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-
-  /*
-   * Exponential ease-out. Decelerates hard and STOPS — no overshoot.
-   * This is the default for anything that comes to rest against a stop.
-   */
+  /* A page passing: decelerates and stops. No overshoot anywhere. */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-
-  /*
-   * Overshoot, reserved for ONE thing: the stamp.
-   *
-   * The design audit flags bounce easing as dated, and on almost everything it
-   * is right — a key bottoming out against its own shadow must not spring past
-   * the stop, because real keys do not. It stays only where the physics call
-   * for it: a rubber stamp pressed by hand genuinely rebounds off the paper.
-   */
-  --ease-rebound: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────── */
@@ -215,389 +181,235 @@
     background-color: var(--bg-canvas);
     background-image: var(--mood-tint);
     color: var(--fg-primary);
-    font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-    font-size: 15px;
+    font-family: var(--font-text), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    font-size: 17px;
     line-height: 1.6;
+    font-variant-numeric: oldstyle-nums;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Focus is a hard ink ring, not a soft glow. Consistent with everything else
-     and impossible to miss. */
+  /* Focus is a 2px solid ink ring: 13:1 or more on every ground. */
   :focus-visible {
-    outline: 3px solid var(--accent);
+    outline: 2px solid var(--border-ink);
     outline-offset: 2px;
-    border-radius: 2px;
   }
 
   ::selection {
-    background: var(--pop);
-    color: var(--ink-0);
+    background: var(--fg-primary);
+    color: var(--bg-canvas);
   }
 
-  /* Journal prose. Still the most-read text in the app, so it gets size and
-     leading even though the face is now geometric rather than a book serif. */
+  ::placeholder {
+    font-style: italic;
+  }
+
+  /* The text sizes: body copy on the measure. */
   .prose-journal {
-    font-size: 18px;
-    line-height: 1.72;
-    letter-spacing: -0.005em;
+    font-size: 17px;
+    line-height: 1.7;
     max-width: 66ch;
   }
 
-  /* Tiny uppercase labels, in an actual pixel face. This is where the "pixels"
-     live: at 10px a bitmap font is crisper than an antialiased one, so the
-     choice is functional as well as thematic. */
+  /* Guide style: capitals, bold, tracked. For section labels and guide words —
+     never a decorative kicker above a heading. */
   .label {
-    font-family: var(--font-silkscreen), var(--font-jetbrains), monospace;
-    font-size: 10px;
+    font-family: var(--font-text), Georgia, serif;
+    font-size: 13px;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--fg-secondary);
+    color: var(--fg-muted);
   }
 
   .num {
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums lining-nums;
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--border-ink) transparent;
+    scrollbar-color: var(--line-subtle) transparent;
   }
 }
 
-/* ── The brutalist primitives ───────────────────────────────────────────── */
+/* ── The printed primitives ─────────────────────────────────────────────── */
 @layer components {
-  /* A bordered block with a hard shadow. The workhorse. */
+  /* A plate: a 1px ink border on stock. No shadow — it is printed, not stuck on. */
   .brut {
-    border: 3px solid var(--border-ink);
-    box-shadow: var(--shadow-brut);
+    border: 1px solid var(--border-ink);
     background: var(--bg-surface);
   }
-
   .brut-thin {
-    border: 2px solid var(--border-ink);
-    box-shadow: 3px 3px 0 0 var(--border-ink);
+    border: 1px solid var(--border-ink);
     background: var(--bg-surface);
   }
-
-  /* Flat — bordered, no shadow. For things that sit IN the page rather than
-     on top of it. Without this everything floats and the depth stops meaning
-     anything. */
   .brut-flat {
-    border: 3px solid var(--border-ink);
+    border: 1px solid var(--border-ink);
     background: var(--bg-surface);
   }
 
-  /*
-    Skeletons.
+  /* A loose sheet lying on the page: dialogs, the tour, Help. */
+  .sheet {
+    border: 1px solid var(--border-ink);
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow-sheet);
+  }
 
-    3px, not 2px, and the same radius as a real card: this stands in for a
-    .brut block, and matching the border weight means the content lands with
-    ZERO reflow. A skeleton that shifts the layout when it resolves is worse
-    than no skeleton — it draws the eye to the wrong thing at the worst moment.
-  */
+  /* A plate figure gets a second, faint inner frame, as an engraved plate does. */
+  .plate {
+    position: relative;
+    border: 1px solid var(--border-ink);
+    background: var(--bg-surface);
+  }
+  .plate::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid var(--line-subtle);
+    pointer-events: none;
+  }
+
   .skel {
     display: block;
-    border: 3px solid var(--border-ink);
-    border-radius: var(--radius-card);
+    border: 1px solid var(--line-subtle);
     background: var(--bg-sunken);
   }
-
-  /* A line of prose has no border, so neither does its stand-in. A bordered
-     bar per line would read as a table. */
   .skel-line {
     display: block;
     height: 0.9em;
-    border-radius: 2px;
     background: var(--bg-sunken);
   }
 
-  /* Invalid is said with the border, which is this system's own language.
-     No glow, no ring — those belong to a design system this is not. */
   [aria-invalid='true'] {
     border-color: var(--danger);
   }
 
   /*
-   * THE MECHANICAL PRESS.
-   *
-   * Hover lifts the element away from its shadow; pressing drives it down by
-   * exactly the shadow offset until the shadow is gone. Because the travel
-   * equals the offset, the element lands precisely where its shadow was — it
-   * reads as a physical key bottoming out rather than a div moving.
-   *
-   * Three rules from the animation review shaped this:
-   *
-   *  · ASYMMETRIC. Press is 60ms because it is confirming the user's own
-   *    action and must feel instantaneous; the return is 140ms because that is
-   *    the key settling, not the user doing something. Symmetric timing on a
-   *    press-and-release reads as a div easing, not a key travelling.
-   *
-   *  · NAMED PROPERTIES, never `transition: all`. Unbounded property animation
-   *    catches layout and paint properties nobody intended to animate.
-   *
-   *  · HOVER IS GATED behind a real hover capability. On touch, `:hover` sticks
-   *    after the tap and the button sits there looking pressed until you touch
-   *    something else.
+   * Printed controls. Hover lays the control on sunk stock; pressing prints
+   * it reverse. Nothing moves — a printed mark does not travel.
    */
   .brut-press,
   .brut-press-sm {
     transition:
-      transform 140ms var(--ease-out-expo),
-      box-shadow 140ms var(--ease-out-expo);
+      background-color 120ms var(--ease-out-expo),
+      color 120ms var(--ease-out-expo);
     cursor: pointer;
   }
-
   @media (hover: hover) and (pointer: fine) {
-    .brut-press:hover {
-      transform: translate(-2px, -2px);
-      box-shadow: 6px 6px 0 0 var(--border-ink);
-    }
+    .brut-press:hover,
     .brut-press-sm:hover {
-      transform: translate(-1px, -1px);
-      box-shadow: 4px 4px 0 0 var(--border-ink);
+      background-color: var(--bg-sunken);
+    }
+    .brut-press.bg-accent:hover,
+    .brut-press-sm.bg-accent:hover {
+      background-color: var(--fg-secondary);
     }
   }
-
   .brut-press:active,
   .brut-press-sm:active {
-    transition-duration: 60ms;
-  }
-  .brut-press:active {
-    transform: translate(4px, 4px);
-    box-shadow: 0 0 0 0 var(--border-ink);
-  }
-  .brut-press-sm:active {
-    transform: translate(3px, 3px);
-    box-shadow: 0 0 0 0 var(--border-ink);
+    background-color: var(--fg-primary);
+    color: var(--bg-canvas);
   }
 
-  /* Hand-placed tilt. Applied sparingly — everything askew is just noise. */
-  .tilt-l {
-    transform: rotate(-1.4deg);
-  }
+  /* No tilt: a book is set straight. Kept as no-ops so old markup is harmless. */
+  .tilt-l,
   .tilt-r {
-    transform: rotate(1.2deg);
+    transform: none;
   }
 
-  /* A filled sticker: colour block, ink border, ink text. */
+  /* A small printed tag: capitals, hairline box, no fill. */
   .chip-brut {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border: 2px solid var(--border-ink);
-    border-radius: 4px;
-    padding: 0.125rem 0.5rem;
-    font-family: var(--font-silkscreen), var(--font-jetbrains), monospace;
-    font-size: 10px;
+    border: 1px solid var(--border-ink);
+    padding: 0 0.4rem;
+    font-family: var(--font-text), Georgia, serif;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ink-0);
+    letter-spacing: 0.08em;
+    color: var(--fg-primary);
+    background: transparent;
+  }
+
+  /* The unread mark: rubric, round, stays until seen. */
+  .rubric-mark {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--rubric);
   }
 }
 
 /* ── Motion ─────────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Streaming text. Snaps in rather than fading — brutalism does not do a
-     gentle dissolve. */
   @keyframes reveal-word {
-    from {
-      opacity: 0;
-      transform: translateY(3px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
-  /* THE PIXEL LOADER, replacing the breathing dot. Stepped, not smooth — it
-     ticks through frames like a sprite, which is the whole point. */
   @keyframes pixel-march {
-    0%,
-    100% {
-      opacity: 0.25;
-      transform: translateY(0);
-    }
-    50% {
-      opacity: 1;
-      transform: translateY(-4px);
-    }
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
   }
 
+  /* A page passing: a short slide and fade that stops dead. */
   @keyframes rise-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
   }
-
-  /* Entrance with a spring overshoot. */
   @keyframes pop-in {
-    0% {
-      opacity: 0;
-      transform: scale(0.9) translateY(8px);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
   }
-
   @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
-
   @keyframes caret-blink {
-    0%,
-    45% {
-      opacity: 1;
-    }
-    50%,
-    95% {
-      opacity: 0;
-    }
+    0%, 45% { opacity: 1; }
+    50%, 95% { opacity: 0; }
   }
 
-  /* The stamp. Heavier and harder than the old wax seal: it arrives rotated
-     and oversized, overshoots, and lands with a jolt. */
+  /* The sealed stamp: printed onto the page, not slammed. */
   @keyframes stamp-slam {
-    0% {
-      opacity: 0;
-      transform: scale(3) rotate(-18deg);
-    }
-    60% {
-      opacity: 1;
-      transform: scale(0.88) rotate(4deg);
-    }
-    78% {
-      transform: scale(1.08) rotate(-2deg);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1) rotate(-3deg);
-    }
+    from { opacity: 0; transform: scale(1.06); }
+    to { opacity: 1; transform: none; }
   }
 
   @keyframes shake-hard {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-    20% {
-      transform: translateX(-5px);
-    }
-    40% {
-      transform: translateX(5px);
-    }
-    60% {
-      transform: translateX(-3px);
-    }
-    80% {
-      transform: translateX(3px);
-    }
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
   }
 
-  .animate-reveal-word {
-    animation: reveal-word 0.2s linear both;
-  }
-  .animate-pixel-march {
-    animation: pixel-march 0.9s steps(3, end) infinite;
-  }
-  .animate-rise-in {
-    animation: rise-in 0.28s var(--ease-out-expo) both;
-  }
-  .animate-pop-in {
-    animation: pop-in 0.32s var(--ease-out-expo) both;
-  }
-  .animate-fade-in {
-    animation: fade-in 0.2s linear both;
-  }
-  /*
-    Two flat fills swapped on a hard step.
+  .animate-reveal-word { animation: reveal-word 0.18s linear both; }
+  .animate-pixel-march { animation: pixel-march 0.9s steps(3, end) infinite; }
+  .animate-rise-in { animation: rise-in 0.18s var(--ease-out-expo) both; }
+  .animate-pop-in { animation: pop-in 0.18s var(--ease-out-expo) both; }
+  .animate-fade-in { animation: fade-in 0.18s linear both; }
 
-    NOT a shimmer: a shimmer is a gradient travelling under a mask, and this
-    system has no gradients. NOT a pulse either — a smooth opacity sine is the
-    exact thing pixel-loader.tsx rejects, because it reads as "something is
-    smoothly happening" when nothing is. This is the same grammar as
-    pixel-march and caret-blink: discrete frames, machine ticking.
-
-    No animation-fill-mode on purpose. Both reduced-motion tracks below cut
-    iteration-count to 1, after which the element falls back to its own
-    declared background and simply sits there — so this needs no reduced-motion
-    rule of its own.
-  */
   @keyframes block-tick {
-    0%,
-    49% {
-      background-color: var(--bg-sunken);
-    }
-    50%,
-    100% {
-      background-color: var(--bg-elevated);
-    }
+    0%, 49% { background-color: var(--bg-sunken); }
+    50%, 100% { background-color: var(--bg-canvas); }
   }
-  .animate-block-tick {
-    animation: block-tick 1.4s steps(1, end) infinite;
-  }
+  .animate-block-tick { animation: block-tick 1.4s steps(1, end) infinite; }
 
-  .animate-caret {
-    animation: caret-blink 1s steps(1, end) infinite;
-  }
-  .animate-stamp {
-    animation: stamp-slam 0.55s var(--ease-rebound) both;
-  }
-  .animate-shake {
-    animation: shake-hard 0.4s linear both;
-  }
+  .animate-caret { animation: caret-blink 1s steps(1, end) infinite; }
+  .animate-stamp { animation: stamp-slam 0.24s var(--ease-out-expo) both; }
+  .animate-shake { animation: shake-hard 0.3s linear both; }
 
-  /*
-   * Blur is NOT a compositor-cheap property, and animating it would be a
-   * performance finding on anything frequent. It survives here because sealing
-   * is rare, deliberate, and irreversible — the one place in this app where a
-   * heavier effect earns its cost. It is also short, and nothing else is
-   * animating while it runs.
-   */
+  /* Sealing is rare and irreversible: the one place a heavier effect earns it. */
   @keyframes seal-blur {
-    from {
-      filter: blur(0);
-      opacity: 1;
-    }
-    to {
-      filter: blur(6px);
-      opacity: 0.25;
-    }
+    from { filter: blur(0); opacity: 1; }
+    to { filter: blur(6px); opacity: 0.25; }
   }
-  .animate-seal-blur {
-    animation: seal-blur 0.4s linear both;
-  }
-
-  /*
-   * REMOVED: the decorative pixel-grid ground.
-   *
-   * A tiled hairline grid is a recurring generated-UI signature, and it was the
-   * least earned pixel in this design — the loader, the weather columns and
-   * Silkscreen at 10px all do a job, and this one only made texture. The
-   * sign-in page carries itself on the type, the colour block and the stamped
-   * cards. Grid overlays belong on canvases, maps and blueprints.
-   */
+  .animate-seal-blur { animation: seal-blur 0.4s linear both; }
 }
 
-/*
- * The in-app "always reduce motion" preference.
- *
- * Same rules as the OS media query below. It exists because the OS toggle is
- * buried on several platforms and missing on some, and a person who needs it
- * should not have to go hunting through system settings to use this app.
- */
+/* The in-app "always reduce motion" preference. */
 :root[data-reduce-motion="1"] *,
 :root[data-reduce-motion="1"] *::before,
 :root[data-reduce-motion="1"] *::after {
@@ -605,17 +417,7 @@
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
 }
-:root[data-reduce-motion="1"] .brut-press:hover,
-:root[data-reduce-motion="1"] .brut-press:active,
-:root[data-reduce-motion="1"] .brut-press-sm:hover,
-:root[data-reduce-motion="1"] .brut-press-sm:active,
-:root[data-reduce-motion="1"] .tilt-l,
-:root[data-reduce-motion="1"] .tilt-r {
-  transform: none;
-}
 
-/* Reduced motion: no travel, no overshoot. Hover and press still change the
-   shadow, so the interface stays legible without moving. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -624,16 +426,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
-  }
-
-  .brut-press:hover,
-  .brut-press:active,
-  .brut-press-sm:hover,
-  .brut-press-sm:active {
-    transform: none;
-  }
-  .tilt-l,
-  .tilt-r {
-    transform: none;
   }
 }

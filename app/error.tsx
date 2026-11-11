@@ -19,8 +19,7 @@ export default function ErrorBoundary({
   return (
     <main className="grid min-h-dvh place-items-center px-6">
       <div className="w-full max-w-sm">
-        <p className="label">Something broke</p>
-        <h1 className="mt-3 font-serif text-[30px] font-light leading-tight tracking-tight text-ink">
+        <h1 className="mt-3 font-serif text-[27px] leading-tight tracking-tight text-ink">
           That did not load.
         </h1>
         {/*
@@ -51,7 +50,7 @@ export default function ErrorBoundary({
         </div>
 
         {error.digest ? (
-          <p className="mt-6 font-mono text-[11px] text-ink-3">reference {error.digest}</p>
+          <p className="mt-6 font-mono text-[13px] text-ink-3">reference {error.digest}</p>
         ) : null}
       </div>
     </main>

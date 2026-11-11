@@ -30,8 +30,8 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   return (
     <div className="rounded-card brut bg-surface px-4 py-3.5">
       <p className="label">{label}</p>
-      <p className="num mt-1.5 font-serif text-[24px] leading-none text-ink">{value}</p>
-      {sub ? <p className="mt-1 text-[11.5px] text-ink-3">{sub}</p> : null}
+      <p className="num mt-1.5 font-serif text-[27px] leading-none text-ink">{value}</p>
+      {sub ? <p className="mt-1 text-[13px] text-ink-3">{sub}</p> : null}
     </div>
   );
 }
@@ -82,7 +82,7 @@ export function SecurityPanel({
     <div className="flex flex-col gap-10">
       {/* ── What left the device ───────────────────────────────────────── */}
       <section>
-        <p className="label mb-3">What has left your device</p>
+        <p className="label mb-3">Sent to the AI</p>
 
         {calls.length === 0 ? (
           <p className="prose-journal text-ink-3">
@@ -120,7 +120,7 @@ export function SecurityPanel({
                 <>
                   {' '}
                   Your {sealedCount === 1 ? 'sealed entry was' : `${sealedCount} sealed entries were`}{' '}
-                  never included, because the server holds only ciphertext for{' '}
+                  never included: {sealedCount === 1 ? 'it is' : 'they are'} locked, and we cannot read{' '}
                   {sealedCount === 1 ? 'it' : 'them'}.
                 </>
               ) : null}
@@ -135,9 +135,9 @@ export function SecurityPanel({
         <section>
           <p className="label mb-3">The ledger</p>
           <div className="overflow-x-auto rounded-card brut bg-surface">
-            <table className="w-full min-w-[620px] text-left font-mono text-[12px]">
+            <table className="w-full min-w-[620px] text-left font-mono text-[13px]">
               <thead>
-                <tr className="border-b-[3px] border-line bg-sunken text-ink-3">
+                <tr className="border-b border-line bg-sunken text-ink-3">
                   <th className="px-3 py-2 font-medium">When</th>
                   <th className="px-3 py-2 font-medium">Purpose</th>
                   <th className="px-3 py-2 font-medium">Model</th>
@@ -149,7 +149,7 @@ export function SecurityPanel({
               </thead>
               <tbody>
                 {calls.map((c) => (
-                  <tr key={c.id} className="border-b-[3px] border-line last:border-0">
+                  <tr key={c.id} className="border-b border-line last:border-0">
                     <td className="px-3 py-2 text-ink-3">{relativeTime(c.at)}</td>
                     <td className="px-3 py-2 text-ink-2">{c.purpose}</td>
                     <td className="px-3 py-2 text-ink-3">{c.model}</td>
@@ -168,7 +168,7 @@ export function SecurityPanel({
               </tbody>
             </table>
           </div>
-          <p className="mt-2.5 text-[11.5px] leading-relaxed text-ink-3">
+          <p className="mt-2.5 text-[13px] leading-relaxed text-ink-3">
             Written server-side before each response returns, and not writable by the browser
             — a log you could edit would be worthless as a record of what was actually sent.
           </p>
@@ -177,10 +177,10 @@ export function SecurityPanel({
 
       {/* ── Security events ────────────────────────────────────────────── */}
       <section>
-        <p className="label mb-3">Security events</p>
+        <p className="label mb-3">Warnings</p>
         {events.length === 0 ? (
-          <p className="text-[13.5px] text-ink-3">
-            Nothing flagged. Prompt-injection patterns and rate-limit hits would show up here.
+          <p className="text-[13px] text-ink-3">
+            Nothing flagged. If something you write or paste looks like an attempt to trick the AI, or you reach the daily limit, it shows up here.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -190,27 +190,26 @@ export function SecurityPanel({
                 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-card brut bg-surface px-4 py-3"
               >
                 <span
-                  className={`rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+                  className={`border px-2 py-0.5 text-[13px] font-bold uppercase tracking-[0.08em] ${
                     e.severity === 'high'
-                      ? 'bg-danger/15 text-danger'
+                      ? 'border-danger text-danger'
                       : e.severity === 'medium'
-                        ? 'bg-sealed/15 text-sealed'
-                        : 'bg-sunken text-ink-3'
+                        ? 'border-sealed text-sealed'
+                        : 'border-line-faint text-ink-3'
                   }`}
                 >
                   {e.severity}
                 </span>
-                <span className="text-[13.5px] text-ink">{e.kind.replace(/_/g, ' ')}</span>
-                <span className="text-[12px] text-ink-3">{e.detail}</span>
-                <span className="ml-auto text-[11.5px] text-ink-3">{relativeTime(e.at)}</span>
+                <span className="text-[13px] text-ink">{e.kind.replace(/_/g, ' ')}</span>
+                <span className="text-[13px] text-ink-3">{e.detail}</span>
+                <span className="ml-auto text-[13px] text-ink-3">{relativeTime(e.at)}</span>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-2.5 text-[11.5px] leading-relaxed text-ink-3">
-          Injection detection here is heuristic — pattern matching over untrusted content. It
-          catches careless and accidental cases and would not stop a determined attacker.
-          Prompt injection is an unsolved problem, and claiming otherwise would be dishonest.
+        <p className="mt-2.5 text-[13px] leading-relaxed text-ink-3">
+          This check looks for suspicious patterns. It catches accidental cases, not a determined
+          attacker: nobody can fully prevent that yet, and saying otherwise would be dishonest.
         </p>
       </section>
 
@@ -223,21 +222,20 @@ export function SecurityPanel({
           className="flex items-center justify-between rounded-card brut bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
         >
           <span>
-            <span className="block text-[14px] text-ink">Export everything</span>
-            <span className="block text-[12px] text-ink-3">
-              Every entry, summary, and ledger row as JSON. Sealed entries come out as
-              ciphertext — we cannot decrypt them for you either.
+            <span className="block text-[13px] text-ink">Export everything</span>
+            <span className="block text-[13px] text-ink-3">
+              Every entry, summary and log row, as one JSON file. Sealed entries stay locked in
+              the download; we cannot unlock them for you either.
             </span>
           </span>
           <span className="ml-4 shrink-0 text-[13px] text-accent">Download</span>
         </a>
 
-        <div className="rounded-card border border-danger/40 bg-danger/[0.04] p-4">
-          <p className="text-[14px] text-ink">Delete everything</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
-            Removes every session, message, summary and ledger row, then deletes your account.
-            This is a real deletion, not a flag — including the message subcollections that a
-            naive delete would leave orphaned. It cannot be undone.
+        <div className="border border-danger p-4">
+          <p className="text-[13px] text-ink">Delete everything</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
+            Permanently removes every entry, message, summary and log row, then deletes your
+            account. Nothing is kept or hidden; it is all gone. This cannot be undone.
           </p>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-2">
@@ -249,13 +247,13 @@ export function SecurityPanel({
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Type DELETE EVERYTHING"
-              className="min-w-0 flex-1 rounded-control brut-thin bg-surface px-3 py-2 font-mono text-[12.5px] outline-none focus:border-danger"
+              className="min-w-0 flex-1 rounded-control brut-thin bg-surface px-3 py-2 font-mono text-[13px] outline-none focus:border-danger"
             />
             <button
               type="button"
               onClick={handleDelete}
               disabled={confirm !== 'DELETE EVERYTHING' || deleting}
-              className="rounded-control bg-danger px-3.5 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-30"
+              className="brut-press-sm border-2 border-danger bg-surface px-3.5 py-2 text-[13px] font-bold uppercase tracking-wide text-danger transition-opacity disabled:opacity-30"
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </button>

@@ -114,18 +114,18 @@ export function VaultGate({
       onClick={(e) => {
         if (e.target === dialogRef.current) dialogRef.current?.close();
       }}
-      className="m-0 w-full max-w-md rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/50 backdrop:backdrop-blur-[2px] open:animate-rise-in sm:mx-auto sm:mt-[10vh]"
+      className="m-0 w-full max-w-md sheet p-0 text-ink backdrop:bg-black/50 open:animate-rise-in sm:mx-auto sm:mt-[10vh]"
     >
       <form onSubmit={submit} className="flex flex-col gap-5 p-6">
         <div>
           <p className="label text-sealed">{setup ? 'Create your vault' : 'Unlock'}</p>
-          <h2 className="mt-2 font-serif text-[24px] leading-tight">
+          <h2 className="mt-2 font-serif text-[27px] leading-tight">
             {setup ? 'One passphrase. No way back.' : 'Your passphrase'}
           </h2>
         </div>
 
         {setup ? (
-          <p className="text-[13.5px] leading-relaxed text-ink-2">
+          <p className="text-[13px] leading-relaxed text-ink-2">
             Sealed entries are encrypted in this browser before they leave it. We never
             receive your passphrase, so <strong className="text-ink">we cannot reset it</strong> and
             we cannot read your sealed entries — not for support, not for recovery, not
@@ -147,7 +147,7 @@ export function VaultGate({
             aria-invalid={error ? true : undefined}
             aria-describedby={setup && passphrase ? 'vault-pass-hint' : undefined}
             aria-errormessage={error ? 'vault-error' : undefined}
-            className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
+            className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[13px] outline-none focus:border-line-strong"
           />
 
           {setup && passphrase ? (
@@ -161,14 +161,14 @@ export function VaultGate({
                   style={{ transform: `scaleX(${verdict.score / 3})` }}
                 />
               </div>
-              <span className="w-24 shrink-0 text-right text-[11px] text-ink-3">
+              <span className="w-24 shrink-0 text-right text-[13px] text-ink-3">
                 {verdict.label}
               </span>
             </div>
           ) : null}
 
           {setup && passphrase ? (
-            <p id="vault-pass-hint" className="text-[12px] leading-relaxed text-ink-3">
+            <p id="vault-pass-hint" className="text-[13px] leading-relaxed text-ink-3">
               {verdict.hint}
             </p>
           ) : null}
@@ -194,9 +194,9 @@ export function VaultGate({
                   : undefined
               }
               aria-describedby="vault-confirm-hint"
-              className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[14px] outline-none focus:border-line-strong"
+              className="rounded-control brut-thin bg-surface px-3 py-2.5 font-mono text-[13px] outline-none focus:border-line-strong"
             />
-            <p id="vault-confirm-hint" className="text-[12px] text-ink-3">
+            <p id="vault-confirm-hint" className="text-[13px] text-ink-3">
               {confirmation.length >= passphrase.length && confirmation !== passphrase
                 ? 'These two do not match yet.'
                 : 'Typed twice, because there is no way to recover it.'}
@@ -224,7 +224,7 @@ export function VaultGate({
             key={errNonce}
             id="vault-error"
             role="alert"
-            className="animate-shake rounded-control border-[3px] border-line bg-danger px-3 py-2 text-[13px] font-medium text-[#111111]"
+            className="animate-shake rounded-control border border-danger bg-surface px-3 py-2 text-[13px] text-danger"
           >
             {error}
           </p>
@@ -241,14 +241,14 @@ export function VaultGate({
           <button
             type="submit"
             disabled={busy || !passphrase}
-            className="rounded-control bg-sealed px-4 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-40"
+            className="brut-press-sm border-2 border-line bg-accent px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-on-accent transition-opacity disabled:opacity-40"
           >
             {busy ? 'Working…' : setup ? 'Create vault' : 'Unlock'}
           </button>
         </div>
 
         {!setup ? (
-          <p className="text-[11px] text-ink-3">
+          <p className="text-[13px] text-ink-3">
             The key is held in memory only. Press <kbd className="font-mono">Esc</kbd> to lock,
             and it locks itself after 15 minutes of inactivity.
           </p>

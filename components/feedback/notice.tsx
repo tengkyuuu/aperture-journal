@@ -58,7 +58,7 @@ export function Notice({
       key={nonce}
       id={id}
       role="alert"
-      className={`animate-shake flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control border-[3px] border-line bg-danger px-3 py-2 text-[#111111] ${className}`}
+      className={`animate-shake flex flex-wrap items-center gap-x-3 gap-y-2 border border-danger bg-surface px-3 py-2 text-ink ${className}`}
     >
       <p className="min-w-0 flex-1 text-[13px] leading-snug">
         <span className="font-bold">{title}</span>
@@ -69,7 +69,7 @@ export function Notice({
         <button
           type="button"
           onClick={onRetry}
-          className="brut-press-sm shrink-0 rounded-control border-2 border-[#111111] bg-surface px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-ink shadow-[2px_2px_0_0_#111111]"
+          className="brut-press-sm shrink-0 rounded-control border-2 border-line bg-surface px-2.5 py-1 text-[13px] font-bold uppercase tracking-wide text-ink"
         >
           {retryLabel}
         </button>

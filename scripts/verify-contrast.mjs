@@ -129,9 +129,12 @@ for (const scope of ['light', 'dark']) {
 
   // Ink text on the saturated fills. These are the risky ones: every filled
   // chip and key in the app puts near-black text on a loud colour.
-  check('ink on yellow fill', '#111111', pop, 4.5, scope);
-  check('ink on sealed fill', '#111111', sealed, 4.5, scope);
-  check('ink on danger fill', '#111111', danger, 4.5, scope);
+  check('ink on chrome plate', '#1b1a16', pop, 4.5, scope);
+  check('sealed text on canvas', sealed, canvas, 4.5, scope);
+  check('rubric text on canvas', resolve('rubric', scope), canvas, 4.5, scope);
+  check('rubric text on sunken', resolve('rubric', scope), sunken, 4.5, scope);
+  for (const m of ['positive', 'negative', 'level']) check(m + ' mood ink on canvas', resolve(m, scope), canvas, 3, scope);
+  check('danger text on canvas', danger, canvas, 4.5, scope);
 
   // Borders are the entire visual system — they must clear the 3:1 UI bar.
   check('border vs canvas', resolve('border-ink', scope), canvas, 3, scope);

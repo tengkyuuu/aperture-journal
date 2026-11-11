@@ -4,6 +4,7 @@ import { VaultPanel } from '@/components/vault/vault-panel';
 import { getSession } from '@/lib/server/auth';
 import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { listSealedSessions } from '@/lib/server/queries';
+import { PageHead } from '@/components/lexicon/primitives';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,16 +18,12 @@ export default async function VaultPage() {
 
   return (
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">
-      <header className="mb-10">
-        <p className="label">End-to-end encrypted</p>
-        <h1 className="mt-3 font-serif text-[34px] font-light leading-tight tracking-tight text-ink">
-          Vault
-        </h1>
-        <p className="prose-journal mt-4 text-ink-2">
-          Some things you write down are not for anyone else, including the software you
-          wrote them in.
+      <PageHead first="What sealing does" last="Sealed entries" page="Vault" title="Vault">
+        <p>
+          Lock an entry with a passphrase only you know. Once it is sealed, nobody can read it:
+          not us, and not the AI.
         </p>
-      </header>
+      </PageHead>
 
       <VaultPanel sealed={sealed} />
     </div>

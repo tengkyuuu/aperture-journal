@@ -6,6 +6,7 @@ import { getSession } from '@/lib/server/auth';
 import { getProfile, getSessionDetail } from '@/lib/server/queries';
 import { CLEAR_SESSION_PATH, MODE_LABELS } from '@/lib/config';
 import { longDate, relativeTime } from '@/lib/shared/format';
+import { GuideWords } from '@/components/lexicon/primitives';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,32 +29,23 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">
+      {/* The entry page is the dictionary entry itself: guide words for when and
+          whether it is finished, then the headword with its mode as the part of
+          speech. */}
       <header className="mb-10">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="label">{started ? longDate(started) : 'Session'}</p>
-          <span aria-hidden className="text-ink-3">
-            ·
+        <GuideWords
+          first={started ? longDate(started) : 'Undated'}
+          last={meta.status === 'closed' ? `Finished ${relativeTime(meta.endedAt)}` : 'Not ended yet'}
+          page="Entry"
+        />
+        <h1 className="mt-8 text-balance text-[27px] leading-tight tracking-[-0.005em] text-ink">
+          <span className="font-bold">
+            {meta.sealed ? 'Sealed entry' : (meta.title ?? 'A new entry')}
           </span>
-          <p className="label">{MODE_LABELS[meta.mode] ?? meta.mode}</p>
-          {meta.status === 'closed' ? (
-            <>
-              <span aria-hidden className="text-ink-3">
-                ·
-              </span>
-              <p className="label">closed {relativeTime(meta.endedAt)}</p>
-            </>
+          {!meta.sealed ? (
+            <span className="italic text-ink-2"> {(MODE_LABELS[meta.mode] ?? meta.mode).toLowerCase()}.</span>
           ) : null}
-        </div>
-
-        {meta.sealed ? (
-          <h1 className="mt-3 font-serif text-[30px] font-light leading-tight tracking-tight text-ink sm:text-[34px]">
-            Sealed entry
-          </h1>
-        ) : meta.title ? (
-          <h1 className="mt-3 font-serif text-[30px] font-light leading-tight tracking-tight text-ink sm:text-[34px]">
-            {meta.title}
-          </h1>
-        ) : null}
+        </h1>
       </header>
 
       <Canvas

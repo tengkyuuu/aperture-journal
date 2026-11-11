@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { Hint } from '@/components/guide/hint';
 import { relativeTime } from '@/lib/shared/format';
 import type { OpenLoop } from '@/lib/server/queries';
 
@@ -20,22 +21,25 @@ export function OpenLoops({ loops }: { loops: OpenLoop[] }) {
   if (loops.length === 0) return null;
 
   return (
-    <section aria-labelledby="open-loops-heading" className="flex flex-col gap-3">
-      <h2 id="open-loops-heading" className="label">
-        Still open
-      </h2>
+    <section aria-labelledby="open-loops-heading" data-tour="still-open" className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <h2 id="open-loops-heading" className="label">
+          Still open
+        </h2>
+        <Hint term="stillOpen" />
+      </div>
 
-      <ul className="flex flex-col gap-px">
+      <ul className="flex flex-col border-t-2 border-line">
         {loops.map((loop, i) => (
-          <li key={`${loop.sessionId}-${i}`}>
+          <li key={`${loop.sessionId}-${i}`} className="border-b border-line-faint">
             <Link
               href={`/session/${loop.sessionId}`}
-              className="group flex flex-col gap-1 rounded-card px-3 py-2.5 transition-colors hover:bg-surface"
+              className="group flex flex-col gap-1 py-3"
             >
-              <span className="prose-journal text-[16px] leading-snug text-ink-2 group-hover:text-ink">
+              <span className="text-[17px] italic leading-snug text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px]">
                 {loop.text}
               </span>
-              <span className="flex items-center gap-1.5 text-[11.5px] text-ink-3">
+              <span className="flex items-center gap-1.5 text-[13px] text-ink-3">
                 <span className="truncate">{loop.sessionTitle}</span>
                 <span aria-hidden>·</span>
                 <span className="num shrink-0">{relativeTime(loop.at)}</span>

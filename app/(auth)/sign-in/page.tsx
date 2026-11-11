@@ -8,6 +8,7 @@ import { failureFromThrown, type Failure } from '@/lib/client/errors';
 import { Notice } from '@/components/feedback/notice';
 import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { PixelLoader } from '@/components/shell/pixel-loader';
+import { GuideWords } from '@/components/lexicon/primitives';
 
 /**
  * The front door.
@@ -46,20 +47,20 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="relative grid min-h-dvh place-items-center overflow-hidden px-6 py-12">
+    <main className="relative grid min-h-dvh place-items-center px-6 py-12">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
 
+      {/* The title page of the book. Guide words, the frontispiece, the title,
+          one sentence of what this is, the one action, and the three promises
+          set as entries. */}
       <div className="w-full max-w-md">
-        {/*
-          The logo is a glossy 3D render, which is the opposite of everything
-          else here — flat fills, hard borders, zero-blur shadows. Rather than
-          pretend otherwise, it is pasted into a bordered tile and tilted, so it
-          reads as a sticker stuck onto the paper. Collage is already part of
-          this idiom; an unframed gradient floating on cream would not be.
-        */}
-        <div className="tilt-l mb-7 inline-block rounded-card border-[3px] border-line bg-surface px-4 py-3 shadow-[var(--shadow-brut)]">
+        <GuideWords first="Aperture" last="Sign in" page="A private journal" />
+
+        {/* The logo is the one full-colour picture in the system: shown as-is,
+            framed like a plate, never recoloured. */}
+        <div className="plate mt-8 inline-block p-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
               WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
           <img
@@ -67,57 +68,58 @@ export default function SignInPage() {
             alt="Aperture"
             width={1269}
             height={1092}
-            className="block h-24 w-auto"
+            className="relative block h-20 w-auto"
           />
         </div>
 
-        <h1 className="text-[46px] font-bold leading-[0.95] tracking-[-0.03em] text-ink sm:text-[58px]">
-          A PRIVATE
-          <br />
-          PLACE TO
-          <br />
-          <span className="inline-block border-[4px] border-line bg-accent px-2 text-on-accent">
-            THINK.
-          </span>
+        <h1 className="mt-6 text-balance text-[27px] font-bold leading-tight tracking-[-0.005em] text-ink">
+          A private place to think.
         </h1>
+
+        {/* The headline is a promise; this says what the thing actually does,
+            for someone who was sent a link and has never heard of it. */}
+        <p className="mt-3 text-[17px] leading-relaxed text-ink-2">
+          A journal you think out loud in. Write about your day and an AI asks you questions to
+          help you work it through. When you finish, it saves a short summary you can look back on.
+        </p>
 
         <button
           type="button"
           onClick={handleSignIn}
           disabled={busy}
-          className="brut-press mt-9 flex w-full items-center justify-center gap-3 rounded-card border-[3px] border-line bg-surface px-4 py-4 text-[15px] font-bold uppercase tracking-wide text-ink shadow-[var(--shadow-brut)] disabled:pointer-events-none disabled:opacity-60"
+          className="brut-press mt-8 flex min-h-12 w-full items-center justify-center gap-3 border-2 border-line bg-accent px-4 py-3 text-[13px] font-bold uppercase tracking-[0.08em] text-on-accent disabled:pointer-events-none disabled:opacity-60"
         >
-          {busy ? <PixelLoader size="sm" tone="current" /> : <GoogleMark />}
+          {busy ? (
+            <PixelLoader size="sm" tone="current" />
+          ) : (
+            <span className="grid size-7 place-items-center bg-canvas">
+              <GoogleMark />
+            </span>
+          )}
           {busy ? 'Signing in…' : 'Continue with Google'}
         </button>
 
         {failure ? (
           <Notice failure={failure} onRetry={handleSignIn} retryLabel="Retry" className="mt-4" />
         ) : expired ? (
-          <p className="mt-4 rounded-control border-[3px] border-line bg-sunken px-3 py-2 text-[13px] text-ink-2">
+          <p className="mt-4 border border-line bg-sunken px-3 py-2 text-[13px] text-ink-2">
             Your session expired. Sign in again to pick up where you left off.
           </p>
         ) : null}
 
-        {/* The three promises, as stamped cards. */}
-        <ul className="mt-10 flex flex-col gap-2.5">
+        {/* The three promises, set as entries: the word in bold, then its sense. */}
+        <dl className="mt-10 border-t-2 border-line">
           {[
             ['Yours alone', 'Every entry is stored under your account and nobody else’s.'],
-            [
-              'Sealed means sealed',
-              'Encrypted in this browser. We cannot read it. Neither can the AI.',
-            ],
-            ['Nothing hidden', 'Every call to the model is logged where you can see it.'],
-          ].map(([title, body], i) => (
-            <li
-              key={title}
-              className={`rounded-card brut-flat bg-surface px-4 py-3 ${i === 1 ? 'tilt-r' : ''}`}
-            >
-              <p className="label">{title}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-ink-2">{body}</p>
-            </li>
+            ['Sealed means sealed', 'Encrypted in this browser. We cannot read it. Neither can the AI.'],
+            ['Nothing hidden', 'Everything sent to the AI is listed where you can see it.'],
+          ].map(([title, body]) => (
+            <div key={title} className="border-b border-line-faint py-3">
+              <dt className="text-[17px] font-bold leading-snug text-ink">{title}</dt>
+              <dd className="m-0 mt-0.5 text-[13px] leading-relaxed text-ink-2">{body}</dd>
+            </div>
           ))}
-        </ul>
+        </dl>
       </div>
     </main>
   );

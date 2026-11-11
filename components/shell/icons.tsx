@@ -119,3 +119,13 @@ export function IconProfile({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconHelp({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="10" cy="10" r="7.25" />
+      <path d="M7.9 7.9a2.15 2.15 0 1 1 3 2c-.6.27-.9.7-.9 1.35v.35" />
+      <path d="M10 14.1v.05" strokeWidth={2} />
+    </svg>
+  );
+}

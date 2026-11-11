@@ -130,7 +130,7 @@ export function Toaster() {
       {t ? (
         <div
           key={t.id}
-          className="animate-rise-in pointer-events-auto flex max-w-[min(28rem,100%)] items-center gap-3 rounded-card brut bg-surface px-4 py-3 shadow-[var(--shadow-brut)]"
+          className="animate-rise-in pointer-events-auto flex max-w-[min(28rem,100%)] items-center gap-3 rounded-card brut bg-surface px-4 py-3"
         >
           <span
             aria-hidden
@@ -142,7 +142,7 @@ export function Toaster() {
             <button
               type="button"
               onClick={() => onAction(t.action!)}
-              className="brut-press-sm shrink-0 rounded-control border-2 border-line bg-surface px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-ink shadow-[2px_2px_0_0_var(--border-ink)]"
+              className="brut-press-sm shrink-0 rounded-control border-2 border-line bg-surface px-2.5 py-1 text-[13px] font-bold uppercase tracking-wide text-ink"
             >
               {t.action.label}
             </button>

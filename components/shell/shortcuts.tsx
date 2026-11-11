@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { SHORTCUTS_EVENT } from '@/components/guide/events';
+import { useModKey } from '@/hooks/use-mod-key';
+
 /**
  * The keyboard reference, on `?`.
  *
@@ -15,11 +18,12 @@ import { useEffect, useRef, useState } from 'react';
  * unforgivable.
  */
 
+// `MOD` is replaced with ⌘ or Ctrl at render, for the keyboard actually in use.
 const GROUPS: { title: string; items: [string, string][] }[] = [
   {
     title: 'Anywhere',
     items: [
-      ['⌘K', 'Jump to a session or page'],
+      ['MOD K', 'Jump to a session or page'],
       ['?', 'This list'],
       ['Esc', 'Close, or lock the vault'],
     ],
@@ -27,8 +31,8 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
   {
     title: 'Writing',
     items: [
-      ['⌘↵', 'Send'],
-      ['⌘E', 'End the session and distil it'],
+      ['MOD ↵', 'Send'],
+      ['MOD E', 'End the session and distil it'],
     ],
   },
   {
@@ -53,6 +57,7 @@ function isTyping(el: EventTarget | null): boolean {
 export function Shortcuts() {
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
+  const mod = useModKey();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -61,8 +66,14 @@ export function Shortcuts() {
       e.preventDefault();
       setOpen((o) => !o);
     }
+    // Help opens this too.
+    const onOpen = () => setOpen(true);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(SHORTCUTS_EVENT, onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(SHORTCUTS_EVENT, onOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -81,23 +92,23 @@ export function Shortcuts() {
         if (e.target === ref.current) ref.current?.close();
       }}
       // Opens on `?`. Keyboard-initiated, so no entrance animation.
-      className="m-0 w-full max-w-sm rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] sm:mx-auto sm:mt-[14vh]"
+      className="m-0 w-full max-w-sm sheet p-0 text-ink backdrop:bg-black/40 sm:mx-auto sm:mt-[14vh]"
     >
       <div className="flex flex-col gap-5 p-6">
         <p className="label">Keyboard</p>
 
         {GROUPS.map((g) => (
           <div key={g.title} className="flex flex-col gap-2">
-            <p className="text-[12px] text-ink-3">{g.title}</p>
+            <p className="text-[13px] text-ink-3">{g.title}</p>
             <dl className="flex flex-col gap-1.5">
               {g.items.map(([keys, what]) => (
                 <div key={keys} className="flex items-baseline gap-3">
-                  <dt className="w-14 shrink-0">
-                    <kbd className="rounded border border-line bg-sunken px-1.5 py-0.5 font-mono text-[11px] text-ink-2">
-                      {keys}
+                  <dt className="w-16 shrink-0">
+                    <kbd className="rounded border border-line bg-sunken px-1.5 py-0.5 font-mono text-[13px] text-ink-2">
+                      {keys.replace('MOD ', mod === '⌘' ? '⌘' : 'Ctrl+')}
                     </kbd>
                   </dt>
-                  <dd className="text-[13.5px] text-ink-2">{what}</dd>
+                  <dd className="text-[13px] text-ink-2">{what}</dd>
                 </div>
               ))}
             </dl>

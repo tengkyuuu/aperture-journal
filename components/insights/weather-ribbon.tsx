@@ -23,9 +23,12 @@ import type { SessionSummary } from '@/lib/shared/types';
 
 const VIEW_H = 100;
 
+// Three inks, never a blend: emerald mixed into madder is a muddy brown that
+// means nothing. Same thresholds as moodColor().
 function bandColor(valence: number): string {
-  const t = Math.round(((valence + 1) / 2) * 100);
-  return `color-mix(in oklab, var(--positive) ${t}%, var(--negative))`;
+  if (valence > 0.25) return 'var(--positive)';
+  if (valence < -0.25) return 'var(--negative)';
+  return 'var(--level)';
 }
 
 export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
@@ -40,7 +43,7 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-card brut bg-surface">
+      <div className="overflow-hidden border border-line-faint">
         <svg
           viewBox={`0 0 ${n} ${VIEW_H}`}
           preserveAspectRatio="none"
@@ -79,12 +82,12 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
           <>
             <Link
               href={`/session/${active.id}`}
-              className="font-serif text-[15px] text-ink underline-offset-2 hover:underline"
+              className="font-serif text-[17px] text-ink underline-offset-2 hover:underline"
             >
               {active.title ?? 'Untitled'}
             </Link>
             <span className="text-[13px] text-ink-2">{active.mood?.label}</span>
-            <span className="text-[12px] text-ink-3">
+            <span className="text-[13px] text-ink-3">
               {active.startedAt
                 ? new Date(active.startedAt).toLocaleDateString(undefined, {
                     day: 'numeric',
@@ -94,18 +97,18 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
             </span>
           </>
         ) : (
-          <p className="text-[12.5px] text-ink-3">
-            {n} session{n === 1 ? '' : 's'}. Hover a band to read it — colour is valence,
-            thickness is energy.
+          <p className="text-[13px] text-ink-3">
+            {n} {n === 1 ? 'entry' : 'entries'}, oldest on the left. Hover over a band to read
+            it. Colour is how it felt; height is how charged it was.
           </p>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-[11px] text-ink-3">
+      <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink-3">
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden
-            className="h-2.5 w-4 rounded-sm"
+            className="h-2.5 w-4"
             style={{ background: bandColor(-1) }}
           />
           heavier
@@ -113,7 +116,7 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden
-            className="h-2.5 w-4 rounded-sm"
+            className="h-2.5 w-4"
             style={{ background: bandColor(0) }}
           />
           level
@@ -121,13 +124,13 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden
-            className="h-2.5 w-4 rounded-sm"
+            className="h-2.5 w-4"
             style={{ background: bandColor(1) }}
           />
           lighter
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-1 w-4 rounded-sm bg-ink-3" />
+          <span aria-hidden className="h-1 w-4 bg-ink-3" />
           thin = low energy
         </span>
       </div>

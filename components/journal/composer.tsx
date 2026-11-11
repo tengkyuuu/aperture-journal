@@ -3,8 +3,8 @@
 import { useEffect, useRef } from 'react';
 
 import { MODE_LABELS, type ConversationMode } from '@/lib/config';
+import { useModKey } from '@/hooks/use-mod-key';
 
-import { IconSend } from '../shell/icons';
 import { PixelLoader } from '../shell/pixel-loader';
 
 const MODES: ConversationMode[] = ['reflect', 'brainstorm', 'untangle', 'duck'];
@@ -19,11 +19,11 @@ const MODE_HINTS: Record<ConversationMode, string> = {
 /**
  * The composer.
  *
- * Every control here is a physical key: bordered, shadowed, and driven down by
- * exactly the shadow offset when pressed. The mode tabs are the clearest case
- * — the selected one sits FLUSH with the page, shadow gone, as though it were
- * being held down. Selection is communicated by depth as well as by fill,
- * which survives colour-blindness and a bad projector equally well.
+ * Set as the open page of the book: the mode as an italic part of speech, the
+ * chosen one bold over a rule; the writing area an unboxed ruled page under a
+ * heavy head rule; Send a printed-reverse word. On an empty entry the page is
+ * roomy at desk widths and phone-sized below sm, so Send stays above the tab
+ * bar. See DESIGN.md, "Part-of-Speech" and the composer component.
  */
 export function Composer({
   value,
@@ -38,6 +38,7 @@ export function Composer({
   onEnd,
   onStop,
   echoArmed,
+  roomy,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -53,15 +54,18 @@ export function Composer({
   onStop?: () => void;
   /** Echoes is on and watching this draft. Never run it without saying so. */
   echoArmed?: boolean;
+  /** An empty entry: give the page room, as an open notebook would. */
+  roomy?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const mod = useModKey();
 
   // Grow with the writing rather than scrolling inside a fixed box.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 320)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 560)}px`;
   }, [value]);
 
   useEffect(() => {
@@ -77,45 +81,67 @@ export function Composer({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* ── Mode keys ──────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2">
-        {MODES.map((m) => {
-          const on = mode === m;
-          return (
-            <button
-              key={m}
-              type="button"
-              onClick={() => onModeChange(m)}
-              aria-pressed={on}
-              title={MODE_HINTS[m]}
-              className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-[transform,box-shadow,background-color] duration-100 ${
-                on
-                  ? // Held down: flush with the page, shadow gone, filled.
-                    'translate-x-[3px] translate-y-[3px] bg-accent text-on-accent shadow-none'
-                  : 'brut-press-sm bg-surface text-ink shadow-[3px_3px_0_0_var(--border-ink)]'
-              }`}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          );
-        })}
+      {/* ── Mode: set like the part of speech after a headword ─────────── */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <div
+          data-tour="modes"
+          role="group"
+          aria-label="How the AI talks back"
+          className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[17px] sm:gap-x-1"
+        >
+          {MODES.map((m, i) => {
+            const on = mode === m;
+            return (
+              <span key={m} className="inline-flex items-baseline">
+                {i > 0 ? (
+                  <span aria-hidden className="hidden px-1.5 text-ink-3 sm:inline">
+                    ·
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => onModeChange(m)}
+                  aria-pressed={on}
+                  className={`border-b-2 pb-0.5 italic transition-colors ${
+                    on
+                      ? 'border-line font-bold text-ink'
+                      : 'border-transparent text-ink-2 hover:border-line-faint hover:text-ink'
+                  }`}
+                >
+                  {MODE_LABELS[m].toLowerCase()}.
+                </button>
+              </span>
+            );
+          })}
+        </div>
 
         {canEnd ? (
           <button
             type="button"
             onClick={onEnd}
-            className="brut-press-sm ml-auto rounded-control border-[3px] border-line bg-pop px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)]"
+            title="Finish this conversation and turn it into a summary"
+            className="brut-press-sm border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-[0.08em] text-ink"
           >
             End session
-            <span className="ml-1.5 font-mono text-[10px] opacity-70">⌘E</span>
+            <span className="ml-1.5 text-ink-3 [@media(pointer:coarse)]:hidden">{mod}E</span>
           </button>
         ) : null}
       </div>
 
-      <p className="text-[12.5px] leading-relaxed text-ink-3">{MODE_HINTS[mode]}</p>
+      <p className="text-[13px] leading-relaxed text-ink-3">
+        <i className="text-ink-2">{MODE_LABELS[mode].toLowerCase()}.</i> {MODE_HINTS[mode]}
+      </p>
 
-      {/* ── The page you write on ──────────────────────────────────────── */}
-      <div className="flex items-end gap-2 rounded-card brut bg-surface p-2 transition-shadow focus-within:shadow-[var(--shadow-brut-lg)]">
+      {/* ── The open page ───────────────────────────────────────────────
+          Not a box: a ruled page, headed by a heavy rule and closed by a
+          hairline, with faint writing lines at the text's own leading. An
+          empty entry gets a good part of the screen, the way a notebook
+          opens to a blank page rather than a field. */}
+      <div
+        data-tour="composer"
+        className="border-y border-line border-t-2 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_calc(1.7em-1px),var(--line-subtle)_calc(1.7em-1px),var(--line-subtle)_1.7em)] bg-[length:100%_1.7em] bg-local text-[17px] focus-within:border-t-[3px]"
+        style={{ backgroundPositionY: '0.75rem' }}
+      >
         <textarea
           ref={ref}
           value={value}
@@ -126,75 +152,72 @@ export function Composer({
               onSend();
             }
           }}
-          rows={2}
+          rows={3}
           disabled={disabled}
           placeholder={placeholder ?? 'Write something…'}
           aria-label="Your entry"
-          className="prose-journal max-h-80 min-h-[3.5rem] w-full flex-1 resize-none bg-transparent px-3 py-2 outline-none placeholder:text-[15px] placeholder:text-ink-3 disabled:opacity-50"
+          className={`prose-journal block w-full max-w-none resize-none bg-transparent px-1 pt-3 text-ink outline-none placeholder:text-ink-3 disabled:opacity-50 ${
+            roomy ? 'min-h-[9rem] sm:min-h-[38vh]' : 'min-h-[7rem]'
+          }`}
         />
-        {/*
-          While streaming, this is a STOP button rather than a disabled send.
+      </div>
 
-          The loader comes off it deliberately: a control cannot be both the
-          affordance and the progress indicator, and the blinking caret in the
-          reply already says a reply is arriving. The glyph is a filled square
-          — already this system's bullet, its message marker and its loader
-          block, so it needs no explaining.
-        */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-ink-3">
+          {/* Keyboard hints mean nothing on a touch screen. */}
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 [@media(pointer:coarse)]:hidden">
+            <Key>{mod}↵</Key> to send
+            <span aria-hidden>·</span>
+            <Key>{mod}K</Key> to jump
+            <span aria-hidden>·</span>
+            <Key>?</Key> for keys
+          </span>
+          {/*
+            Echoes reads this draft when you pause. It says so here, always,
+            while it is armed. A feature that sends unsent writing anywhere and
+            does not admit it on screen is the thing this app exists not to be.
+          */}
+          {echoArmed ? (
+            <span
+              title="When you pause, this draft is sent to the AI search model to find older entries about the same thing. Turn it off in Profile."
+              className="inline-flex items-center gap-1 font-bold text-ink-2"
+            >
+              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-sealed" />
+              echoes on
+            </span>
+          ) : null}
+        </p>
+
+        {/* While streaming, Send becomes Stop: the same printed key, said in
+            rubric. A control cannot be both the affordance and the progress
+            indicator; the caret in the reply already says one is arriving. */}
         {busy && onStop ? (
           <button
             type="button"
             onClick={onStop}
-            aria-label="Stop generating"
-            title="Stop generating"
-            className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-danger text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)] transition-[transform,box-shadow] duration-100"
+            className="brut-press-sm min-h-10 border-2 border-danger bg-surface px-4 text-[13px] font-bold uppercase tracking-[0.08em] text-danger"
           >
-            <span aria-hidden className="size-3 bg-[#111111]" />
+            Stop
           </button>
         ) : (
           <button
             type="button"
             onClick={onSend}
             disabled={disabled || busy || !value.trim()}
-            aria-label="Send"
-            className="brut-press-sm mb-1 grid size-11 shrink-0 place-items-center rounded-control border-[3px] border-line bg-accent text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] transition-[transform,box-shadow,opacity] duration-100 disabled:pointer-events-none disabled:opacity-30"
+            className="brut-press-sm inline-flex min-h-10 items-center gap-2 border-2 border-line bg-accent px-5 text-[13px] font-bold uppercase tracking-[0.08em] text-on-accent transition-opacity disabled:pointer-events-none disabled:opacity-35"
           >
-            {busy ? <PixelLoader size="sm" tone="current" /> : <IconSend />}
+            {busy ? <PixelLoader size="sm" tone="current" /> : null}
+            Send
           </button>
         )}
       </div>
-
-      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-ink-3">
-        <Key>⌘↵</Key> to send
-        <span aria-hidden>·</span>
-        <Key>⌘K</Key> to jump
-        <span aria-hidden>·</span>
-        <Key>?</Key> for keys
-        {/*
-          Echoes reads this draft when you pause. It says so here, always,
-          while it is armed. A feature that sends unsent writing anywhere and
-          does not admit it on screen is the thing this app exists not to be.
-        */}
-        {echoArmed ? (
-          <>
-            <span aria-hidden>·</span>
-            <span
-              title="When you pause, this draft is sent to the embedding model to look for past entries like it. Turn it off in your profile."
-              className="inline-flex items-center gap-1 font-medium text-ink-2"
-            >
-              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-sealed" />
-              echoes on
-            </span>
-          </>
-        ) : null}
-      </p>
     </div>
   );
 }
 
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded border-2 border-line bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-ink-2">
+    <kbd className="border border-line-faint px-1 font-sans text-[13px] font-bold not-italic tracking-[0.04em] text-ink-2">
       {children}
     </kbd>
   );

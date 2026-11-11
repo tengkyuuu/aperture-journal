@@ -101,9 +101,9 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
       // day, and animating a keyboard-initiated surface puts a delay between
       // the keystroke and the thing the user is already typing into. The
       // palette should simply BE there.
-      className="m-0 w-full max-w-lg rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-[2px] sm:mx-auto sm:mt-[12vh]"
+      className="m-0 w-full max-w-lg sheet p-0 text-ink backdrop:bg-black/40 sm:mx-auto sm:mt-[12vh]"
     >
-      <div className="border-b-[3px] border-line px-4">
+      <div className="border-b border-line px-4">
         <input
           autoFocus
           value={query}
@@ -114,7 +114,7 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
           onKeyDown={onInputKey}
           placeholder="Jump to a session or a page…"
           aria-label="Search sessions and pages"
-          className="w-full bg-transparent py-4 text-[15px] outline-none placeholder:text-ink-3"
+          className="w-full bg-transparent py-4 text-[17px] outline-none placeholder:text-ink-3"
         />
       </div>
 
@@ -134,9 +134,9 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
                   c.id === active?.id ? 'bg-sunken' : ''
                 }`}
               >
-                <span className="min-w-0 flex-1 truncate text-[14px]">{c.label}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px]">{c.label}</span>
                 {c.hint ? (
-                  <span className="shrink-0 text-[11px] text-ink-3">{c.hint}</span>
+                  <span className="shrink-0 text-[13px] text-ink-3">{c.hint}</span>
                 ) : null}
               </button>
             </li>
@@ -144,7 +144,7 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
         )}
       </ul>
 
-      <div className="flex items-center gap-3 border-t-[3px] border-line px-4 py-2.5 text-[11px] text-ink-3">
+      <div className="flex items-center gap-3 border-t border-line px-4 py-2.5 text-[13px] text-ink-3">
         <span>
           <kbd className="font-mono">↑↓</kbd> navigate
         </span>

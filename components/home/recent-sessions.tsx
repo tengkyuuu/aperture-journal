@@ -4,9 +4,11 @@ import { MODE_LABELS } from '@/lib/config';
 import { moodColor, moodOpacity, relativeTime } from '@/lib/shared/format';
 import type { SessionSummary } from '@/lib/shared/types';
 import { IconVault } from '@/components/shell/icons';
+import { MoodWord, SectionLabel } from '@/components/lexicon/primitives';
 
 /**
- * Recent sessions as typographic cards — title, mood, themes, when.
+ * The latest entries, set as headwords: the title in bold, the mode in italic as
+ * its part of speech, then how it felt, what it was about, and when.
  *
  * No thumbnails, no progress bars, no engagement metrics. The most useful
  * thing a list of your own writing can show is what it was about and how it
@@ -16,59 +18,50 @@ export function RecentSessions({ sessions }: { sessions: SessionSummary[] }) {
   if (sessions.length === 0) return null;
 
   return (
-    <section aria-labelledby="recent-heading" className="flex flex-col gap-3">
+    <section aria-labelledby="recent-heading" className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="recent-heading" className="label">
-          Lately
-        </h2>
+        <SectionLabel id="recent-heading">Lately</SectionLabel>
         <Link
           href="/insights"
-          className="text-[12px] text-ink-3 underline-offset-2 transition-colors hover:text-accent hover:underline"
+          className="text-[13px] text-ink underline decoration-1 underline-offset-[3px] hover:decoration-2"
         >
           All insights
         </Link>
       </div>
 
-      <ul className="flex flex-col gap-px">
+      <ul className="flex flex-col border-t-2 border-line">
         {sessions.map((s) => (
-          <li key={s.id}>
-            <Link
-              href={`/session/${s.id}`}
-              className="group flex items-baseline gap-3 rounded-card px-3 py-2.5 transition-colors hover:bg-surface"
-            >
-              <span
-                aria-hidden
-                className="mt-2 size-1.5 shrink-0 rounded-full"
-                style={{ background: moodColor(s.mood), opacity: moodOpacity(s.mood) }}
-              />
+          <li key={s.id} className="border-b border-line-faint">
+            <Link href={`/session/${s.id}`} className="group block py-3">
+              <p className="m-0 text-[17px] leading-snug">
+                <span
+                  className={`font-bold group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px] ${
+                    s.title && !s.sealed ? 'text-ink' : 'text-ink-3'
+                  }`}
+                >
+                  {s.sealed ? 'Sealed entry' : (s.title ?? 'Untitled')}
+                </span>
+                {!s.sealed ? (
+                  <span className="italic text-ink-2"> {(MODE_LABELS[s.mode] ?? s.mode).toLowerCase()}.</span>
+                ) : null}
+              </p>
 
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline gap-2">
-                  <span
-                    className={`min-w-0 truncate font-serif text-[16px] leading-snug ${
-                      s.title ? 'text-ink' : 'italic text-ink-3'
-                    }`}
-                  >
-                    {s.sealed ? 'Sealed entry' : (s.title ?? 'Untitled')}
+              <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-3">
+                {s.sealed ? (
+                  <span className="inline-flex items-center gap-1.5 text-sealed">
+                    <IconVault className="size-3.5" />
+                    sealed
                   </span>
-                  {s.sealed ? <IconVault className="size-3.5 shrink-0 text-sealed" /> : null}
-                </span>
-
-                <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-ink-3">
-                  {/* Mood in words, always — the dot is a second encoding, never the only one. */}
-                  {s.mood ? <span>{s.mood.label}</span> : null}
-                  {s.mood && s.themes.length > 0 ? <span aria-hidden>·</span> : null}
-                  {s.themes.length > 0 ? (
-                    <span className="truncate">{s.themes.slice(0, 3).join(', ')}</span>
-                  ) : null}
-                  {!s.mood && s.themes.length === 0 ? (
-                    <span>{MODE_LABELS[s.mode] ?? s.mode}</span>
-                  ) : null}
-                </span>
-              </span>
-
-              <span className="num shrink-0 text-[11.5px] text-ink-3">
-                {relativeTime(s.startedAt)}
+                ) : s.mood ? (
+                  <MoodWord color={moodColor(s.mood)} opacity={moodOpacity(s.mood)}>
+                    {s.mood.label}
+                  </MoodWord>
+                ) : null}
+                {s.themes.length > 0 && !s.sealed ? (
+                  <span className="truncate">· {s.themes.slice(0, 3).join(', ')}</span>
+                ) : null}
+                <span aria-hidden>·</span>
+                <span className="num">{relativeTime(s.startedAt)}</span>
               </span>
             </Link>
           </li>

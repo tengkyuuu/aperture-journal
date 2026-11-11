@@ -21,14 +21,14 @@ export default function GlobalError({
           minHeight: '100dvh',
           display: 'grid',
           placeItems: 'center',
-          background: '#0b0b0c',
-          color: '#f3efe7',
-          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          background: '#ebeeec',
+          color: '#1a1c1d',
+          fontFamily: '"Old Standard TT", "Iowan Old Style", "Palatino Linotype", Georgia, serif',
           padding: '1.5rem',
         }}
       >
         <div style={{ maxWidth: '24rem' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 300, margin: 0 }}>
+          <h1 style={{ fontSize: '27px', fontWeight: 700, margin: 0 }}>
             Aperture could not start.
           </h1>
           {/*
@@ -36,7 +36,7 @@ export default function GlobalError({
             or about what the composer was holding. Claim less than app/error.tsx
             deliberately: a boundary that knows less should promise less.
           */}
-          <p style={{ color: '#a9a9b4', fontSize: '0.875rem', lineHeight: 1.6 }}>
+          <p style={{ color: '#434847', fontSize: '17px', lineHeight: 1.6 }}>
             Your saved entries are safe. Reload, and if this keeps happening, quote the
             reference below.
           </p>
@@ -45,19 +45,19 @@ export default function GlobalError({
             onClick={reset}
             style={{
               marginTop: '1.5rem',
-              background: '#8b99e6',
-              color: '#0b0b0c',
+              background: '#1a1c1d',
+              color: '#ebeeec',
               border: 0,
-              borderRadius: 6,
+              borderRadius: 0,
               padding: '0.5rem 1rem',
-              fontSize: '0.8125rem',
+              fontSize: '13px',
               cursor: 'pointer',
             }}
           >
             Reload
           </button>
           {error.digest ? (
-            <p style={{ marginTop: '1.5rem', fontSize: '0.6875rem', color: '#6b6b75' }}>
+            <p style={{ marginTop: '1.5rem', fontSize: '13px', color: '#5b6160' }}>
               reference {error.digest}
             </p>
           ) : null}

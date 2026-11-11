@@ -100,7 +100,7 @@ export function SessionActions({
   }
 
   return (
-    <div className="mt-10 flex flex-wrap items-center gap-2 border-t-[3px] border-line pt-5">
+    <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-line pt-5">
       {editing ? (
         <form
           onSubmit={(e) => {
@@ -119,19 +119,19 @@ export function SessionActions({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && setEditing(false)}
             maxLength={120}
-            className="min-w-0 flex-1 rounded-control border-[3px] border-line bg-surface px-3 py-1.5 text-[14px] outline-none"
+            className="min-w-0 flex-1 rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] outline-none"
           />
           <button
             type="submit"
             disabled={busy}
-            className="brut-press-sm rounded-control border-[3px] border-line bg-accent px-3 py-1.5 text-[12px] font-bold uppercase text-on-accent shadow-[3px_3px_0_0_var(--border-ink)] disabled:opacity-40"
+            className="brut-press-sm rounded-control border-2 border-line bg-accent px-3 py-1.5 text-[13px] font-bold uppercase text-on-accent disabled:opacity-40"
           >
             Save
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="rounded-control px-2 py-1.5 text-[12px] text-ink-3 hover:text-ink"
+            className="rounded-control px-2 py-1.5 text-[13px] text-ink-3 hover:text-ink"
           >
             Cancel
           </button>
@@ -145,7 +145,7 @@ export function SessionActions({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="brut-press-sm rounded-control border-[3px] border-line bg-surface px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-ink shadow-[3px_3px_0_0_var(--border-ink)]"
+              className="brut-press-sm rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-ink"
             >
               Rename
             </button>
@@ -158,7 +158,7 @@ export function SessionActions({
               setFailure(null);
               dialogRef.current?.showModal();
             }}
-            className="brut-press-sm ml-auto rounded-control border-[3px] border-line bg-surface px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-danger shadow-[3px_3px_0_0_var(--border-ink)]"
+            className="brut-press-sm ml-auto rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-danger"
           >
             Delete entry
           </button>
@@ -175,15 +175,15 @@ export function SessionActions({
         onClick={(e) => {
           if (e.target === dialogRef.current) dialogRef.current?.close();
         }}
-        className="m-0 w-full max-w-md rounded-sheet brut bg-elevated p-0 text-ink backdrop:bg-black/50 open:animate-rise-in sm:mx-auto sm:mt-[14vh]"
+        className="m-0 w-full max-w-md sheet p-0 text-ink backdrop:bg-black/50 open:animate-rise-in sm:mx-auto sm:mt-[14vh]"
       >
         <div className="flex flex-col gap-4 p-6">
           <div>
             <span className="chip-brut bg-danger">Cannot be undone</span>
-            <h2 className="mt-3 text-[22px] font-bold uppercase leading-tight">Delete this entry</h2>
+            <h2 className="mt-3 text-[27px] font-bold uppercase leading-tight">Delete this entry</h2>
           </div>
 
-          <p className="text-[13.5px] leading-relaxed text-ink-2">
+          <p className="text-[13px] leading-relaxed text-ink-2">
             The entry, its messages and its summary are removed from the server permanently.
             {sealed
               ? ' This entry is sealed, so the copy here is the only copy that has ever existed.'
@@ -199,7 +199,7 @@ export function SessionActions({
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="DELETE"
-              className="rounded-control border-[3px] border-line bg-surface px-3 py-2 font-mono text-[13px] outline-none"
+              className="rounded-control border-2 border-line bg-surface px-3 py-2 font-mono text-[13px] outline-none"
             />
           </div>
 
@@ -221,7 +221,7 @@ export function SessionActions({
               type="button"
               onClick={remove}
               disabled={confirm !== 'DELETE' || busy}
-              className="brut-press-sm rounded-control border-[3px] border-line bg-danger px-4 py-2 text-[12px] font-bold uppercase tracking-wide text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)] disabled:pointer-events-none disabled:opacity-30"
+              className="brut-press-sm rounded-control border-2 border-danger bg-surface px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-danger disabled:pointer-events-none disabled:opacity-30"
             >
               {busy ? 'Deleting…' : 'Delete'}
             </button>

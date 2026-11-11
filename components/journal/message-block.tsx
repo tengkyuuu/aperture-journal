@@ -64,10 +64,11 @@ export function MessageBlock({
       aria-live={streaming ? 'polite' : undefined}
       aria-busy={streaming || undefined}
     >
-      {/* A solid ink rule and a square marker. The old hairline-and-dot was
-          the previous system's whisper; this system does not whisper. */}
-      <span aria-hidden className="absolute left-0 top-[0.7em] bottom-[0.4em] w-[3px] bg-accent" />
-      <span aria-hidden className="absolute -left-[5px] top-[0.75em] size-[11px] border-[3px] border-line bg-accent" />
+      {/* The AI's turn is marked the way a reference book marks a gloss: an
+          italic letter hung in the margin, not a coloured side stripe. */}
+      <span aria-hidden className="absolute left-0 top-0 text-[17px] italic leading-[1.7] text-ink-3">
+        Q.
+      </span>
       <div className="prose-journal whitespace-pre-wrap text-ink-2">
         {streaming ? <RevealText text={content} /> : content}
         {streaming ? (
@@ -89,7 +90,7 @@ export function MessageBlock({
  */
 export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
   return (
-    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border-[3px] border-dashed border-sealed bg-sealed/10 px-4 py-3">
+    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border-2 border-dashed border-sealed bg-sealed/10 px-4 py-3">
       <span className="size-2.5 shrink-0 border-2 border-line bg-sealed" aria-hidden />
       <p className="text-[13px] text-ink-3">
         <span className="text-sealed">Sealed.</span> Only your passphrase opens this — not us,
@@ -99,7 +100,7 @@ export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
         <button
           type="button"
           onClick={onUnlock}
-          className="ml-auto rounded-full border border-sealed/40 px-2.5 py-1 text-[11.5px] text-sealed transition-colors hover:bg-sealed/10"
+          className="ml-auto border border-sealed px-2.5 py-1 text-[13px] text-sealed transition-colors hover:bg-sealed/10"
         >
           Unlock
         </button>

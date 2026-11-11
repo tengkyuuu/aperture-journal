@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { AskView } from '@/components/ask/ask-view';
 import { getSession } from '@/lib/server/auth';
 import { CLEAR_SESSION_PATH } from '@/lib/config';
+import { PageHead } from '@/components/lexicon/primitives';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,16 +13,13 @@ export default async function AskPage() {
 
   return (
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">
-      <header className="mb-10">
-        <p className="label">Retrieval over your own writing</p>
-        <h1 className="mt-3 font-serif text-[34px] font-light leading-tight tracking-tight text-ink">
-          Ask your past
-        </h1>
-        <p className="prose-journal mt-4 text-ink-2">
-          Answers come only from entries you have written, cited back to the day you wrote
-          them.
+      <PageHead first="Your question" last="Answers" page="Ask your past" title="Ask your past">
+        <p>
+          Ask a question about your own entries. Answers use only what you wrote, and each point
+          links to the entry it came from. Only finished entries can be searched, and sealed ones
+          never are.
         </p>
-      </header>
+      </PageHead>
 
       <AskView />
     </div>

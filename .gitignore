@@ -54,3 +54,8 @@ gcp-key*.json
 
 # third-party agent skills — tooling, not project source
 .agents/
+
+# impeccable: runtime state and review screenshots (kept local)
+.impeccable/questions/
+.impeccable/review/
+.impeccable/hook.cache.json

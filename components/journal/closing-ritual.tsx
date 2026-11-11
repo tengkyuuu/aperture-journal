@@ -2,6 +2,7 @@
 
 import { moodColor } from '@/lib/shared/format';
 import type { Insights } from '@/lib/shared/types';
+import { Hint } from '@/components/guide/hint';
 import { PixelLoader } from '@/components/shell/pixel-loader';
 
 /**
@@ -26,7 +27,7 @@ export function Distilling() {
       aria-live="polite"
     >
       <PixelLoader />
-      <span className="label tracking-[0.2em]">distilling</span>
+      <span className="label tracking-[0.2em]">writing your summary</span>
     </div>
   );
 }
@@ -55,15 +56,17 @@ export function InsightReveal({ insights }: { insights: Insights }) {
   const { title, summary, bullets, openLoops, mood, themes, suggestedExperiment } = insights;
 
   return (
-    <section aria-label="Session summary" className="mt-10 border-t-[3px] border-line pt-10">
+    <section aria-label="Session summary" className="mt-10 border-t border-line pt-10">
       <div className="flex flex-col gap-5">
+        {/* The page head already prints the headword; this section is headed by
+            what it is, and the title is kept only for screen readers. */}
         <Card i={0}>
-          <div className="tilt-l inline-block">
-            <span className="chip-brut bg-pop">Distilled</span>
+          <div className="flex items-center gap-2 border-b-2 border-line pb-2">
+            <h2 className="label">
+              Distilled<span className="sr-only">: {title}</span>
+            </h2>
+            <Hint term="distilled" />
           </div>
-          <h2 className="mt-3 text-[30px] font-bold leading-[1.1] tracking-tight text-ink">
-            {title}
-          </h2>
         </Card>
 
         <Card i={1}>
@@ -74,7 +77,7 @@ export function InsightReveal({ insights }: { insights: Insights }) {
           <Card i={2}>
             <ul className="flex flex-col gap-2.5">
               {bullets.map((b, i) => (
-                <li key={i} className="grid grid-cols-[14px_1fr] gap-3 text-[14px] text-ink-2">
+                <li key={i} className="grid grid-cols-[14px_1fr] gap-3 text-[13px] text-ink-2">
                   {/* A square, not a bullet. Round dots belong to the old system. */}
                   <span aria-hidden className="mt-[7px] size-2 bg-accent" />
                   <span>{b}</span>
@@ -109,7 +112,7 @@ export function InsightReveal({ insights }: { insights: Insights }) {
               <p className="label mb-2.5">Still open</p>
               <ul className="flex flex-col gap-1.5">
                 {openLoops.map((l, i) => (
-                  <li key={i} className="text-[13.5px] text-ink-2">
+                  <li key={i} className="text-[13px] text-ink-2">
                     {l}
                   </li>
                 ))}
@@ -122,9 +125,9 @@ export function InsightReveal({ insights }: { insights: Insights }) {
           <Card i={5}>
             {/* The one card that is a filled colour block — it is the only
                 thing here asking you to DO something. */}
-            <div className="tilt-r rounded-card brut bg-pop p-4 text-[#111111]">
-              <p className="label text-[#111111]">One thing to try</p>
-              <p className="mt-1.5 text-[15px] font-medium leading-relaxed">
+            <div className="plate bg-pop p-5 text-[#1b1a16]">
+              <p className="label !text-[#1b1a16]">One thing to try</p>
+              <p className="mt-1.5 text-[17px] font-medium leading-relaxed">
                 {suggestedExperiment}
               </p>
             </div>

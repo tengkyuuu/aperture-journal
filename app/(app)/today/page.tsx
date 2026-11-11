@@ -8,7 +8,7 @@ import { MoodTint } from '@/components/shell/mood-tint';
 import { getSession } from '@/lib/server/auth';
 import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { getHomeDigest, getProfile } from '@/lib/server/queries';
-import { longDate } from '@/lib/shared/format';
+import { PageHead } from '@/components/lexicon/primitives';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,24 +58,22 @@ export default async function TodayPage() {
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">
       <MoodTint mood={digest.weekMood} />
 
-      <header className="mb-10">
-        <p className="label">{longDate()}</p>
-        <h1 className="mt-3 font-serif text-[34px] font-light leading-tight tracking-tight text-ink sm:text-[40px]">
-          {isNew
-            ? 'A private place to think.'
-            : firstName
-              ? `Hello, ${firstName}.`
-              : 'Welcome back.'}
-        </h1>
-
+      <PageHead
+        first={new Date().toLocaleDateString(undefined, { weekday: 'long' })}
+        last={new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+        page="Today"
+        title={isNew ? 'A private place to think.' : firstName ? `Hello, ${firstName}.` : 'Welcome back.'}
+      >
         {isNew ? (
-          <p className="prose-journal mt-4 text-ink-2">
-            Write whatever is on your mind. When you are done, end the session and it will be
-            distilled into something you can come back to. Nothing is shared, and nothing
-            leaves your account.
+          <p>
+            Write whatever is on your mind and press send. The AI answers with a question to help
+            you think it through. When you are done, press End session and the conversation is
+            filed under Sessions as a short summary you can come back to.
           </p>
-        ) : null}
-      </header>
+        ) : (
+          <p>Write, talk it through, then press End session to file it as an entry.</p>
+        )}
+      </PageHead>
 
       {/* The saved default mode, finally doing something. */}
       <Canvas
@@ -85,7 +83,7 @@ export default async function TodayPage() {
       />
 
       {!isNew ? (
-        <div className="mt-16 flex flex-col gap-12 border-t-[3px] border-line pt-12">
+        <div className="mt-12 flex flex-col gap-12 border-t border-line pt-10">
           <OpenLoops loops={digest.openLoops} />
           <WeekStrip
             sessions={digest.recent}

@@ -114,7 +114,7 @@ export function AskView() {
           placeholder="Ask your journal something…"
           aria-label="Ask your journal"
           disabled={busy}
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] outline-none placeholder:text-ink-3"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-[17px] outline-none placeholder:text-ink-3"
         />
         <button
           type="submit"
@@ -137,7 +137,7 @@ export function AskView() {
                   setQuestion(s);
                   void ask(s);
                 }}
-                className="rounded-full border-2 border-line px-3 py-1.5 text-[12.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+                className="border border-line px-3 py-1.5 text-left text-[13px] italic text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
               >
                 {s}
               </button>
@@ -169,7 +169,7 @@ export function AskView() {
           </div>
 
           {!busy && citations.length > 0 ? (
-            <div className="flex flex-col gap-2 border-t-[3px] border-line pt-5">
+            <div className="flex flex-col gap-2 border-t border-line pt-5">
               <p className="label">Drawn from</p>
               <ul className="flex flex-col gap-1">
                 {citations.map((c) => (
@@ -179,7 +179,7 @@ export function AskView() {
                       className="flex items-baseline gap-2.5 rounded-control px-2 py-1.5 text-[13px] transition-colors hover:bg-sunken"
                     >
                       <span className="min-w-0 flex-1 truncate text-ink-2">{c.title}</span>
-                      <span className="num shrink-0 text-[11px] text-ink-3">
+                      <span className="num shrink-0 text-[13px] text-ink-3">
                         {c.date
                           ? new Date(c.date).toLocaleDateString(undefined, {
                               day: 'numeric',
@@ -191,7 +191,7 @@ export function AskView() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-ink-3">
+              <p className="mt-1 text-[13px] leading-relaxed text-ink-3">
                 Only session summaries were searched — never the raw messages, and never a
                 sealed entry.
               </p>
@@ -226,7 +226,7 @@ function CitedText({ text, citations }: { text: string; citations: Citation[] })
             key={i}
             href={`/session/${id}`}
             title={cite.title}
-            className="mx-0.5 inline-flex translate-y-[-1px] items-center rounded-full bg-accent-wash px-1.5 font-sans text-[11px] font-medium text-accent no-underline align-baseline"
+            className="mx-0.5 align-super text-[13px] font-bold leading-none text-ultramarine no-underline hover:underline"
           >
             {index}
           </Link>

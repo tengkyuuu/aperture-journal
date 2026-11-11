@@ -4,6 +4,7 @@ import { SecurityPanel } from '@/components/security/security-panel';
 import { getSession } from '@/lib/server/auth';
 import { CLEAR_SESSION_PATH } from '@/lib/config';
 import { listAiCalls, listSealedSessions, listSecurityEvents } from '@/lib/server/queries';
+import { PageHead } from '@/components/lexicon/primitives';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,16 +21,12 @@ export default async function SecurityPage() {
 
   return (
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">
-      <header className="mb-10">
-        <p className="label">What has left your device</p>
-        <h1 className="mt-3 font-serif text-[34px] font-light leading-tight tracking-tight text-ink">
-          Security &amp; privacy
-        </h1>
-        <p className="prose-journal mt-4 text-ink-2">
-          Every call this app makes to an AI model on your behalf is recorded here — what was sent,
-          how much of it, and what it cost.
+      <PageHead first="Sent to the AI" last="Your data" page="Security" title="Security & privacy">
+        <p>
+          Everything Aperture has sent to the AI for you, what each request contained, and what it
+          would cost on a paid plan. You can download or delete all of your data at the bottom.
         </p>
-      </header>
+      </PageHead>
 
       <SecurityPanel calls={calls} events={events} sealedCount={sealed.length} />
     </div>

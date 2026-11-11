@@ -1,39 +1,21 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import { JetBrains_Mono, Silkscreen, Space_Grotesk } from 'next/font/google';
+import { Old_Standard_TT } from 'next/font/google';
 
 import './globals.css';
 
 /**
- * Type pairing, "Paper Cut":
- *   Space Grotesk — everything. Display, UI, and the journal prose itself.
- *                   Brutalism runs on one loud voice, not a conversation
- *                   between two, so the old serif/sans split is gone.
- *   Silkscreen    — an actual bitmap face for the 10px uppercase labels.
- *                   At that size a pixel font is genuinely CRISPER than an
- *                   antialiased one, so this is functional as well as
- *                   thematic — the "pixels" earn their place.
- *   JetBrains Mono — the ledger, where digits must line up in columns and
- *                   Silkscreen has no tabular figures.
+ * Type, "The Lexicon": one family for everything.
+ *
+ * Old Standard TT is a revival of the "Modern" faces nineteenth-century
+ * dictionaries and reference books were set in. Rank comes from bold, italic
+ * and capitals at three sizes, never from a second family or a bigger size.
  */
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
-});
-
-const silkscreen = Silkscreen({
+const oldStandard = Old_Standard_TT({
   subsets: ['latin'],
   weight: ['400', '700'],
-  variable: '--font-silkscreen',
-  display: 'swap',
-});
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains',
+  style: ['normal', 'italic'],
+  variable: '--font-text',
   display: 'swap',
 });
 
@@ -52,8 +34,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fffcf2' },
-    { media: '(prefers-color-scheme: dark)', color: '#141414' },
+    { media: '(prefers-color-scheme: light)', color: '#ebeeec' },
+    { media: '(prefers-color-scheme: dark)', color: '#131517' },
   ],
 };
 
@@ -79,10 +61,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${spaceGrotesk.variable} ${silkscreen.variable} ${jetbrains.variable}`}
+      className={oldStandard.variable}
     >
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        {/* suppressHydrationWarning: browsers blank a script's nonce attribute
+            after reading it, so injected code cannot copy it. React then sees
+            "" where the server sent the value and reports a mismatch that is
+            really the security feature working. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }}
+        />
       </head>
       <body className="min-h-dvh bg-canvas text-ink antialiased">{children}</body>
     </html>

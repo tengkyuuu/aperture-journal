@@ -17,15 +17,6 @@ import { PixelLoader } from '@/components/shell/pixel-loader';
 
 const MODES: ConversationMode[] = ['reflect', 'brainstorm', 'untangle', 'duck'];
 
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-card brut-flat bg-surface px-4 py-3.5">
-      <p className="num text-[26px] font-bold leading-none tracking-tight text-ink">{value}</p>
-      <p className="label mt-2">{label}</p>
-    </div>
-  );
-}
-
 /**
  * The profile.
  *
@@ -87,13 +78,13 @@ export function ProfileView({
         <div className="flex flex-wrap items-center gap-4">
           <span
             aria-hidden
-            className="grid size-16 shrink-0 place-items-center rounded-card border-[3px] border-line bg-accent text-[20px] font-bold text-on-accent"
+            className="grid size-16 shrink-0 place-items-center rounded-card border-2 border-line bg-accent text-[17px] font-bold text-on-accent"
           >
             {initials(user.displayName, user.email)}
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[20px] font-bold leading-tight text-ink">
+            <p className="truncate text-[17px] font-bold leading-tight text-ink">
               {user.displayName ?? 'You'}
             </p>
             <p className="truncate text-[13px] text-ink-2">{user.email}</p>
@@ -109,7 +100,7 @@ export function ProfileView({
               router.replace('/sign-in');
               router.refresh();
             }}
-            className="brut-press-sm rounded-control border-[3px] border-line bg-surface px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-ink shadow-[3px_3px_0_0_var(--border-ink)]"
+            className="brut-press-sm rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-ink"
           >
             Sign out
           </button>
@@ -119,20 +110,18 @@ export function ProfileView({
       {/* ── What you've done ──────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <h2 className="label">By the numbers</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat value={String(stats.totalSessions)} label="entries" />
-          <Stat value={String(stats.streak)} label="day streak" />
-          <Stat value={String(stats.themes.length)} label="themes" />
-          <Stat value={String(stats.sealedSessions)} label="sealed" />
-        </div>
-
         {stats.firstEntry ? (
-          <p className="text-[12.5px] text-ink-3">
-            First entry {relativeTime(stats.firstEntry)} ·{' '}
-            {stats.closedSessions} distilled · {stats.openSessions} still open
+          <p className="prose-journal text-ink-2">
+            <b className="text-ink">{stats.totalSessions}</b>{' '}
+            {stats.totalSessions === 1 ? 'entry' : 'entries'}, {stats.closedSessions} finished and{' '}
+            {stats.openSessions} not ended yet; <b className="text-ink">{stats.themes.length}</b>{' '}
+            {stats.themes.length === 1 ? 'theme' : 'themes'};{' '}
+            {stats.sealedSessions === 0 ? 'none sealed' : `${stats.sealedSessions} sealed`}. First entry{' '}
+            {relativeTime(stats.firstEntry)}
+            {stats.streak > 1 ? `, and you have written ${stats.streak} days running` : ''}.
           </p>
         ) : (
-          <p className="text-[12.5px] text-ink-3">
+          <p className="text-[13px] text-ink-3">
             Nothing written yet. The numbers fill in as you go.
           </p>
         )}
@@ -158,12 +147,16 @@ export function ProfileView({
         <h2 className="label">Preferences</h2>
 
         <div className="rounded-card brut bg-surface p-5">
-          <p className="text-[14px] font-bold text-ink">Default mode</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-3">
+          <p className="text-[13px] font-bold text-ink">Default mode</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-3">
             Which companion a new entry starts in.
           </p>
 
-          <div className="mt-3.5 flex flex-wrap gap-2">
+          <div
+            role="group"
+            aria-label="Default mode"
+            className="mt-3.5 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[17px]"
+          >
             {MODES.map((m) => {
               const on = defaultMode === m;
               return (
@@ -178,13 +171,13 @@ export function ProfileView({
                     const ok = await save({ defaultMode: m }, 'mode');
                     if (!ok) setDefaultMode(prev);
                   }}
-                  className={`rounded-control border-[3px] border-line px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide transition-[transform,box-shadow,background-color] duration-100 ${
+                  className={`border-b-2 pb-0.5 italic transition-colors disabled:opacity-60 ${
                     on
-                      ? 'translate-x-[3px] translate-y-[3px] bg-accent text-on-accent shadow-none'
-                      : 'brut-press-sm bg-surface text-ink shadow-[3px_3px_0_0_var(--border-ink)]'
+                      ? 'border-line font-bold text-ink'
+                      : 'border-transparent text-ink-2 hover:border-line-faint hover:text-ink'
                   }`}
                 >
-                  {MODE_LABELS[m]}
+                  {MODE_LABELS[m].toLowerCase()}.
                 </button>
               );
             })}
@@ -205,8 +198,8 @@ export function ProfileView({
             className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
           />
           <span>
-            <span className="block text-[14px] font-bold text-ink">Always reduce motion</span>
-            <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-3">
+            <span className="block text-[13px] font-bold text-ink">Always reduce motion</span>
+            <span className="mt-1 block text-[13px] leading-relaxed text-ink-3">
               Removes the press travel, the tilt, and the ceremony animations. Your operating
               system&rsquo;s setting is already respected — this forces it on regardless.
             </span>
@@ -222,7 +215,7 @@ export function ProfileView({
           app/api/echo/route.ts. A toggle is not a control.
         */}
         <div className="rounded-card brut bg-surface p-5">
-          <span className="chip-brut bg-sealed">Sends data while you type</span>
+          <span className="chip-brut border-rubric text-rubric">Sends data while you type</span>
 
           <label className="mt-3.5 flex cursor-pointer items-start gap-3.5">
             <input
@@ -238,52 +231,49 @@ export function ProfileView({
               className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
             />
             <span>
-              <span className="block text-[14px] font-bold text-ink">
+              <span className="block text-[13px] font-bold text-ink">
                 Echoes — tell me when I&rsquo;ve been here before
               </span>
-              <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-3">
-                While you write, if you pause for a moment, we send the draft to an
-                embedding model to look for older entries about the same thing. When one
-                turns up, a card appears with what you called it then and how your mood
-                compares.
+              <span className="mt-1 block text-[13px] leading-relaxed text-ink-3">
+                While you write, if you pause for a moment, your draft is sent to the AI search
+                model to look for older entries about the same thing. When one turns up, a card
+                shows what you called it then and how your mood compares.
               </span>
             </span>
           </label>
 
-          <ul className="mt-3.5 flex flex-col gap-1.5 border-t-[3px] border-line pt-3.5 text-[12px] leading-relaxed text-ink-2">
+          <ul className="mt-3.5 flex flex-col gap-1.5 border-t border-line pt-3.5 text-[13px] leading-relaxed text-ink-2">
             <li>
               <strong className="font-bold text-ink">This sends writing you have not
               submitted.</strong>{' '}
               A draft you might delete. That is why it is off until you turn it on.
             </li>
             <li>
-              Every check is recorded in your{' '}
+              Every check is listed on your{' '}
               <Link href="/security" className="text-accent underline underline-offset-2">
-                privacy ledger
+                Security page
               </Link>{' '}
-              as <span className="font-mono text-[11px]">draft_text</span>. If it happens,
-              it is on the record.
+              as an unsent draft. If it happens, it is on the record.
             </li>
             <li>
               It never runs while your vault is unlocked — a draft you may be about to
               seal must not have been sent anywhere first.
             </li>
             <li>
-              Only your own entries are ever searched, and sealed ones cannot be found:
-              sealing deletes the embedding.
+              Only your own entries are ever searched, and sealed ones can never be found.
             </li>
             <li>The composer says &ldquo;echoes on&rdquo; the whole time it is watching.</li>
           </ul>
         </div>
 
-        <p className="text-[12px] leading-relaxed text-ink-3">
+        <p className="text-[13px] leading-relaxed text-ink-3">
           Light or dark is kept on this device rather than your account. Wanting dark on a
           laptop at night and light on a phone outdoors is normal, and syncing it would be
           worse.
         </p>
 
         {saving || pending ? (
-          <p className="flex items-center gap-2 text-[12px] text-ink-3">
+          <p className="flex items-center gap-2 text-[13px] text-ink-3">
             <PixelLoader size="sm" /> saving
           </p>
         ) : null}
@@ -298,12 +288,12 @@ export function ProfileView({
         <div className="grid gap-3 sm:grid-cols-2">
           <Link
             href="/vault"
-            className="brut-press-sm flex items-start gap-3 rounded-card border-[3px] border-line bg-surface p-4 shadow-[3px_3px_0_0_var(--border-ink)]"
+            className="brut-press-sm flex items-start gap-3 rounded-card border-2 border-line bg-surface p-4"
           >
             <IconVault className="mt-0.5 size-5 shrink-0 text-sealed" />
             <span>
-              <span className="block text-[14px] font-bold text-ink">Vault</span>
-              <span className="mt-0.5 block text-[12.5px] text-ink-3">
+              <span className="block text-[13px] font-bold text-ink">Vault</span>
+              <span className="mt-0.5 block text-[13px] text-ink-3">
                 {user.vault
                   ? `${stats.sealedSessions} sealed ${stats.sealedSessions === 1 ? 'entry' : 'entries'}`
                   : 'Not set up yet'}
@@ -313,12 +303,12 @@ export function ProfileView({
 
           <Link
             href="/security"
-            className="brut-press-sm flex items-start gap-3 rounded-card border-[3px] border-line bg-surface p-4 shadow-[3px_3px_0_0_var(--border-ink)]"
+            className="brut-press-sm flex items-start gap-3 rounded-card border-2 border-line bg-surface p-4"
           >
             <IconSecurity className="mt-0.5 size-5 shrink-0 text-accent" />
             <span>
-              <span className="block text-[14px] font-bold text-ink">Security &amp; privacy</span>
-              <span className="mt-0.5 block text-[12.5px] text-ink-3">
+              <span className="block text-[13px] font-bold text-ink">Security &amp; privacy</span>
+              <span className="mt-0.5 block text-[13px] text-ink-3">
                 {stats.aiCalls} model {stats.aiCalls === 1 ? 'call' : 'calls'} ·{' '}
                 {stats.estCostUsd < 0.01 ? '<$0.01' : `$${stats.estCostUsd.toFixed(2)}`} · export
                 and delete

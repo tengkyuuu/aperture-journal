@@ -4,6 +4,7 @@ import { ProfileView } from '@/components/profile/profile-view';
 import { getSession } from '@/lib/server/auth';
 import { getProfile, getProfileStats } from '@/lib/server/queries';
 import { CLEAR_SESSION_PATH } from '@/lib/config';
+import { PageHead } from '@/components/lexicon/primitives';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,12 +26,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-[68ch] px-6 py-10 sm:px-8 lg:py-16">
-      <header className="mb-10">
-        <p className="label">Account</p>
-        <h1 className="mt-3 text-[34px] font-bold uppercase leading-[0.95] tracking-tight text-ink">
-          Profile
-        </h1>
-      </header>
+      <PageHead first="By the numbers" last="Preferences" page="Profile" title="Profile" />
 
       <ProfileView
         user={{

@@ -30,22 +30,22 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
       <div className="flex flex-wrap items-center gap-3 rounded-card brut bg-surface p-4">
         <span
           aria-hidden
-          className={`grid size-9 place-items-center rounded-full ${
-            unlocked ? 'bg-sealed text-white' : 'bg-sunken text-ink-3'
+          className={`grid size-9 place-items-center border ${
+            unlocked ? 'border-sealed text-sealed' : 'border-line text-ink-3'
           }`}
         >
           <IconVault className="size-4" />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] text-ink">
+          <p className="text-[13px] text-ink">
             {vault.status === 'uninitialised'
               ? 'No vault yet'
               : unlocked
                 ? 'Unlocked'
                 : 'Locked'}
           </p>
-          <p className="text-[12.5px] text-ink-3">
+          <p className="text-[13px] text-ink-3">
             {vault.status === 'uninitialised'
               ? 'Create one to start sealing entries.'
               : unlocked
@@ -66,7 +66,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
           <button
             type="button"
             onClick={() => setGateOpen(true)}
-            className="rounded-control bg-sealed px-3.5 py-1.5 text-[13px] font-medium text-white"
+            className="brut-press-sm border-2 border-line bg-accent px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-wide text-on-accent"
           >
             {vault.status === 'uninitialised' ? 'Create vault' : 'Unlock'}
           </button>
@@ -75,38 +75,47 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
 
       {/* ── How it works ───────────────────────────────────────────────── */}
       <section className="rounded-card brut bg-surface p-5">
-        <p className="label mb-3">What sealing actually does</p>
-        <ul className="flex flex-col gap-2.5 text-[13.5px] leading-relaxed text-ink-2">
+        <p className="label mb-3">What sealing does</p>
+        <ul className="flex flex-col gap-2.5 text-[13px] leading-relaxed text-ink-2">
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="pt-[9px] h-px w-3.5 bg-line-strong" />
+            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
             <span>
-              Your passphrase is stretched with <span className="font-mono text-[12.5px]">PBKDF2</span>{' '}
-              (600,000 rounds, SHA-256) into an AES-256-GCM key, in this browser.
+              Your passphrase never leaves this browser. It is turned into the key that locks your
+              entries right here.
             </span>
           </li>
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="pt-[9px] h-px w-3.5 bg-line-strong" />
+            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
             <span>
-              Each message is encrypted here before it is sent. The server stores a blob it
-              has no way to open.
+              Each message is locked before it is sent, so our server only ever stores scrambled
+              text it cannot open.
             </span>
           </li>
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="pt-[9px] h-px w-3.5 bg-line-strong" />
+            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
             <span>
-              The summary, mood, themes and embedding are <strong className="text-ink">deleted</strong>{' '}
-              when an entry is sealed. Leaving them would keep the interesting part in the
-              clear, which would make the whole exercise theatre.
+              Its summary, mood and themes are <strong className="text-ink">deleted</strong>, so a
+              sealed entry no longer appears in Insights, Ask your past or Echoes. Keeping them
+              would leave the most revealing part readable.
             </span>
           </li>
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="pt-[9px] h-px w-3.5 bg-line-strong" />
+            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
             <span className="text-ink-3">
-              What stays visible to us: that an entry exists, when it was written, and how
-              many messages it holds. Encryption hides content, not metadata.
+              We can still see that the entry exists, when you wrote it and how many messages it
+              has, but not what it says. Forget the passphrase and nobody can open it again.
             </span>
           </li>
         </ul>
+        <details className="mt-4 text-[13px] text-ink-3">
+          <summary className="cursor-pointer list-none text-ink-2 underline decoration-1 underline-offset-[3px] hover:text-ink [&::-webkit-details-marker]:hidden">
+            Show the technical details
+          </summary>
+          <p className="mt-2 leading-relaxed">
+            The key is derived in your browser with PBKDF2 (SHA-256, 600,000 rounds) and used for
+            AES-256-GCM encryption. The server stores only the encrypted text.
+          </p>
+        </details>
       </section>
 
       {/* ── Entries ────────────────────────────────────────────────────── */}
@@ -117,7 +126,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
 
         {sealed.length === 0 ? (
           <p className="prose-journal text-ink-3">
-            Nothing is sealed yet. Open any entry and choose “Seal this entry” to encrypt it.
+            Nothing is sealed yet. To seal one, open an entry and choose “Seal this entry” at the bottom.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -129,13 +138,13 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
                 >
                   <IconVault className="size-4 shrink-0 text-sealed" />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-serif text-[15px] text-ink">Sealed entry</span>
-                    <span className="block text-[12px] text-ink-3">
+                    <span className="block font-serif text-[17px] text-ink">Sealed entry</span>
+                    <span className="block text-[13px] text-ink-3">
                       <span className="num">{relativeTime(s.startedAt)}</span> ·{' '}
                       {s.messageCount} messages
                     </span>
                   </span>
-                  <span className="shrink-0 text-[12px] text-ink-3">
+                  <span className="shrink-0 text-[13px] text-ink-3">
                     {unlocked ? 'Open' : 'Locked'}
                   </span>
                 </Link>

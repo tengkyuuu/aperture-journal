@@ -96,6 +96,9 @@ export function Canvas({
   const sealAfterUnlock = useRef(false);
 
   useEffect(() => {
+    // Only once there is a conversation to follow. On an empty entry this
+    // scrolled the page on load and tucked the running head under the header.
+    if (turns.length === 0 && ritual === 'idle') return;
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [turns.length, ritual]);
 
@@ -415,30 +418,31 @@ export function Canvas({
           canEnd={canEnd}
           onEnd={endSession}
           echoArmed={echoArmed}
+          roomy={turns.length === 0}
         />
       ) : null}
 
       {showComposer ? <EchoCards echoes={echoes} onDismiss={dismissEcho} /> : null}
 
       {canSeal ? (
-        <div className="flex flex-wrap items-center gap-3 border-t-[3px] border-line pt-5">
+        <div className="flex flex-wrap items-center gap-3 border-t border-line pt-5">
           <button
             type="button"
             onClick={requestSeal}
-            className="brut-press-sm inline-flex items-center gap-2 rounded-control border-[3px] border-line bg-sealed px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wide text-[#111111] shadow-[3px_3px_0_0_var(--border-ink)]"
+            className="brut-press-sm inline-flex items-center gap-2 rounded-control border-2 border-sealed bg-surface px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-wide text-sealed"
           >
             <IconVault className="size-3.5" />
             Seal this entry
           </button>
-          <p className="text-[12px] leading-relaxed text-ink-3">
+          <p className="text-[13px] leading-relaxed text-ink-3">
             Encrypted in this browser. Neither we nor the AI can read it afterwards — which
             also means no summary, no search, and no mood tracking for it.
           </p>
         </div>
       ) : truncated && !sealed && sealState === 'idle' ? (
-        <div className="flex flex-col gap-2 border-t-[3px] border-line pt-5">
+        <div className="flex flex-col gap-2 border-t border-line pt-5">
           <p className="label">Sealing unavailable here</p>
-          <p className="text-[12px] leading-relaxed text-ink-3">
+          <p className="text-[13px] leading-relaxed text-ink-3">
             This entry is longer than can be loaded at once, so only part of it is on
             screen. Sealing encrypts what the browser is holding, and doing that here
             would leave the rest of the entry behind. It stays readable rather than
@@ -450,7 +454,7 @@ export function Canvas({
       {sealState === 'sealed' || sealed ? (
         <p className="text-[13px] text-ink-3">
           {vault.status === 'unlocked'
-            ? 'Sealed. Decrypted here in your browser; the server still holds only ciphertext.'
+            ? 'Sealed. Unlocked here in your browser only; our server still cannot read it.'
             : 'Sealed. Unlock your vault to read this.'}
         </p>
       ) : null}
@@ -496,7 +500,7 @@ function SealCeremony() {
       role="status"
       aria-live="polite"
     >
-      <div className="animate-seal-press grid size-16 place-items-center rounded-full bg-sealed text-white shadow-[var(--shadow-brut)]">
+      <div className="animate-seal-press grid size-16 place-items-center rounded-full bg-sealed text-canvas">
         <IconVault className="size-7" />
       </div>
       <span className="label text-sealed">sealing</span>

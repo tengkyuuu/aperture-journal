@@ -165,9 +165,9 @@ export function EchoCards({
         >
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <span className="chip-brut bg-pop">You&rsquo;ve been here</span>
+              <span className="chip-brut border-rubric text-rubric">You&rsquo;ve been here</span>
 
-              <p className="mt-2.5 truncate text-[15px] font-bold text-ink">
+              <p className="mt-2.5 truncate text-[17px] font-bold text-ink">
                 {echo.title}
               </p>
               <p className="label mt-1">{relativeTime(echo.startedAt)}</p>
@@ -196,7 +196,7 @@ export function EchoCards({
 
           <Link
             href={`/session/${echo.sessionId}`}
-            className="brut-press-sm mt-3.5 inline-block rounded-control border-[3px] border-line bg-surface px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-ink shadow-[3px_3px_0_0_var(--border-ink)]"
+            className="brut-press-sm mt-3.5 inline-block rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-ink"
           >
             Read it
           </Link>

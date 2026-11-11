@@ -42,7 +42,7 @@ export function moodColor(mood: Mood | null): string {
   if (!mood) return 'var(--fg-muted)';
   if (mood.valence > 0.25) return 'var(--positive)';
   if (mood.valence < -0.25) return 'var(--negative)';
-  return 'var(--accent)';
+  return 'var(--level)';
 }
 
 /** Opacity carries energy, so a flat day reads flatter than a charged one. */

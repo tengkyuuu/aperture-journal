@@ -9,11 +9,15 @@ import { initials } from '@/lib/shared/format';
 import type { SessionSummary, UserProfile } from '@/lib/shared/types';
 
 import { Toaster } from '@/components/feedback/toaster';
+import { openHelp } from '@/components/guide/events';
+import { Help } from '@/components/guide/help';
+import { Tour } from '@/components/guide/tour';
+import { ShoulderIndex } from '@/components/lexicon/shoulder-index';
 import { useOnline } from '@/hooks/use-online';
 
 import { CommandPalette } from './command-palette';
 import { Shortcuts } from './shortcuts';
-import { IconClose, IconMenu } from './icons';
+import { IconClose, IconHelp, IconMenu } from './icons';
 import { NAV } from './nav';
 import { ThemeToggle } from './theme-toggle';
 import { Timeline } from './timeline';
@@ -33,11 +37,29 @@ function OfflineChip({ compact = false }: { compact?: boolean }) {
       title="No network. You can still write — sending is what stops."
       className={
         compact
-          ? 'grid size-9 place-items-center rounded-control border-2 border-line bg-danger text-[9px] font-bold uppercase text-[#111111]'
-          : 'chip-brut bg-danger text-[#111111]'
+          ? 'grid size-9 place-items-center border border-rubric bg-surface text-[13px] font-bold uppercase text-rubric'
+          : 'chip-brut border-rubric text-rubric'
       }
     >
       {compact ? 'off' : 'offline'}
+    </span>
+  );
+}
+
+/**
+ * A label that appears beside a rail icon the moment it is hovered or focused.
+ *
+ * The rail used to rely on `title`, which the browser shows after a second's
+ * stillness and never on keyboard focus — so six unlabeled glyphs were the
+ * whole of the desktop navigation for anyone who did not already know them.
+ */
+function RailTip({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-control border-2 border-line bg-elevated px-2 py-1 text-[13px] font-medium text-ink opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-within:opacity-100"
+    >
+      {children}
     </span>
   );
 }
@@ -115,18 +137,20 @@ export function AppShell({
       </a>
 
       {/* ── Rail ─────────────────────────────────────────────────────────── */}
-      <aside className="sticky top-0 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r-[3px] border-line bg-surface py-4 md:flex">
+      {/* z-30: the rail's labels overhang the timeline beside it, and two
+          sticky siblings otherwise paint in DOM order — the timeline on top. */}
+      <aside className="sticky top-0 z-30 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r border-line bg-surface py-4 md:flex">
         <Link
           href="/today"
           aria-label="Aperture — home"
-          className="brut-press-sm mb-3 grid size-10 place-items-center rounded-card border-2 border-line bg-surface shadow-[2px_2px_0_0_var(--border-ink)]"
+          className="mb-3 grid size-10 place-items-center border border-line bg-canvas"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
               WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
           <img src="/logo-sm.webp" alt="" width={1269} height={1092} className="w-8" />
         </Link>
 
-        <nav aria-label="Main" className="flex flex-col items-center gap-1">
+        <nav aria-label="Main" data-tour="nav" className="flex flex-col items-center gap-1">
           {NAV.map(({ href, label, Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
@@ -135,12 +159,12 @@ export function AppShell({
                 href={href}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
-                title={label}
-                className={`grid size-10 place-items-center rounded-control transition-colors ${
+                className={`group relative grid size-10 place-items-center rounded-control transition-colors ${
                   active ? 'bg-accent-wash text-accent' : 'text-ink-3 hover:bg-sunken hover:text-ink'
                 }`}
               >
                 <Icon />
+                <RailTip>{label}</RailTip>
               </Link>
             );
           })}
@@ -154,41 +178,73 @@ export function AppShell({
             only the sending does not.
           */}
           {!online ? <OfflineChip compact /> : null}
-          <ThemeToggle />
+          <button
+            type="button"
+            onClick={openHelp}
+            aria-label="Help and tour"
+            data-tour="help"
+            className="group relative grid size-10 place-items-center rounded-control text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <IconHelp />
+            <RailTip>Help &amp; tour</RailTip>
+          </button>
+          <span className="group relative">
+            <ThemeToggle />
+            <RailTip>Light / dark</RailTip>
+          </span>
+          {/* It signs you out on click, which nothing about an avatar says —
+              so the label says it, instantly, before the click. */}
           <button
             type="button"
             onClick={handleSignOut}
-            title={user.email ?? 'Sign out'}
             aria-label="Sign out"
-            className="grid size-9 place-items-center rounded-full border-2 border-line text-[11px] font-medium text-ink-2 transition-colors hover:border-line-strong"
+            className="group relative grid size-9 place-items-center border border-line text-[13px] font-medium text-ink-2 transition-colors hover:border-line-strong"
           >
             {initials(user.displayName, user.email)}
+            <RailTip>Sign out{user.email ? ` · ${user.email}` : ''}</RailTip>
           </button>
         </div>
       </aside>
 
       {/* ── Timeline (persistent at lg) ──────────────────────────────────── */}
-      <aside className="sticky top-0 hidden h-dvh w-[320px] shrink-0 border-r-[3px] border-line bg-surface lg:block">
+      <aside
+        data-tour="sessions"
+        className="sticky top-0 hidden h-dvh w-[320px] shrink-0 border-r border-line bg-surface lg:block"
+      >
         <Timeline sessions={sessions} />
       </aside>
 
       {/* ── Canvas ───────────────────────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-2 border-b-[3px] border-line bg-canvas/85 px-4 py-2.5 backdrop-blur-sm lg:hidden">
+        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-canvas px-4 py-2.5 lg:hidden">
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="Open sessions"
             aria-expanded={sheetOpen}
+            data-tour="sessions"
             className="grid size-9 place-items-center rounded-control text-ink-2 transition-colors hover:bg-sunken"
           >
             <IconMenu />
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
-              WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
-          <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="h-7 w-auto" />
+          {/* Framed like the rail's logo: the one full-colour picture sits in its own square. */}
+          <span className="border border-line bg-canvas p-0.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
+                WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
+            <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="block h-6 w-auto" />
+          </span>
           <div className="ml-auto flex items-center gap-2">
             {!online ? <OfflineChip /> : null}
+            {/* Below md there is no rail, so Help lives up here. */}
+            <button
+              type="button"
+              onClick={openHelp}
+              aria-label="Help and tour"
+              data-tour="help"
+              className="grid size-9 place-items-center rounded-control text-ink-2 transition-colors hover:bg-sunken md:hidden"
+            >
+              <IconHelp />
+            </button>
             <span className="md:hidden">
               <ThemeToggle />
             </span>
@@ -209,7 +265,8 @@ export function AppShell({
         */}
         <nav
           aria-label="Main"
-          className="fixed inset-x-0 bottom-0 z-10 flex border-t-[3px] border-line bg-surface/95 backdrop-blur-sm md:hidden"
+          data-tour="nav"
+          className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-surface/95 backdrop-blur-sm md:hidden"
         >
           {NAV.slice(0, 5).map(({ href, label, Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -219,7 +276,7 @@ export function AppShell({
                 href={href}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] transition-colors ${
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[13px] transition-colors ${
                   active ? 'text-accent' : 'text-ink-3'
                 }`}
               >
@@ -240,8 +297,8 @@ export function AppShell({
             onClick={() => setSheetOpen(false)}
             className="absolute inset-0 bg-black/40 animate-fade-in"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[min(320px,85vw)] flex-col border-r-[3px] border-line bg-surface animate-rise-in">
-            <div className="flex items-center justify-between border-b-[3px] border-line px-4 py-3">
+          <div className="absolute inset-y-0 left-0 flex w-[min(320px,85vw)] flex-col border-r border-line bg-surface animate-rise-in">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
                   WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
               <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="h-6 w-auto" />
@@ -257,7 +314,7 @@ export function AppShell({
             <div className="min-h-0 flex-1">
               <Timeline sessions={sessions} onNavigate={() => setSheetOpen(false)} />
             </div>
-            <div className="flex flex-col gap-1 border-t-[3px] border-line p-3">
+            <div className="flex flex-col gap-1 border-t border-line p-3">
               <Link
                 href="/profile"
                 className="rounded-control px-3 py-2 text-[13px] font-bold uppercase tracking-wide text-ink-2 hover:bg-sunken hover:text-ink"
@@ -278,6 +335,9 @@ export function AppShell({
 
       <CommandPalette sessions={sessions} />
       <Shortcuts />
+      <Help />
+      <Tour />
+      <ShoulderIndex sessions={sessions} />
       {/* One instance for the whole app. It lives above the routes so an
           acknowledgement survives the navigation that caused it — deleting an
           entry redirects to /today and the toast has to outlive that. */}
