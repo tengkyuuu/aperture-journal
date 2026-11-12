@@ -134,7 +134,7 @@ export function Toaster() {
         >
           <span
             aria-hidden
-            className={`size-2.5 shrink-0 border-2 border-line ${t.tone === 'warn' ? 'bg-sealed' : 'bg-pop'}`}
+            className={`size-2.5 shrink-0 border border-line rounded-control ${t.tone === 'warn' ? 'bg-sealed' : 'bg-pop'}`}
           />
           <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink">{t.message}</p>
 
@@ -142,7 +142,7 @@ export function Toaster() {
             <button
               type="button"
               onClick={() => onAction(t.action!)}
-              className="brut-press-sm shrink-0 rounded-control border-2 border-line bg-surface px-2.5 py-1 text-[13px] font-bold uppercase tracking-wide text-ink"
+              className="brut-press-sm shrink-0 rounded-control border border-line bg-surface px-2.5 py-1 text-[13px] font-semibold text-ink"
             >
               {t.action.label}
             </button>

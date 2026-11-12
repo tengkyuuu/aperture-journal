@@ -45,7 +45,7 @@ export function MessageBlock({
         {sealed ? (
           <span
             aria-hidden
-            className="absolute -left-5 top-[0.85em] size-2.5 border-2 border-line bg-sealed"
+            className="absolute -left-5 top-[0.85em] size-2.5 border border-line bg-sealed rounded-control"
             title="Sealed — decrypted locally"
           />
         ) : null}
@@ -66,8 +66,8 @@ export function MessageBlock({
     >
       {/* The AI's turn is marked the way a reference book marks a gloss: an
           italic letter hung in the margin, not a coloured side stripe. */}
-      <span aria-hidden className="absolute left-0 top-0 text-[17px] italic leading-[1.7] text-ink-3">
-        Q.
+      <span aria-hidden className="absolute left-0 top-1 grid size-6 place-items-center rounded-full bg-accent-wash text-[11px] font-semibold text-accent">
+        AI
       </span>
       <div className="prose-journal whitespace-pre-wrap text-ink-2">
         {streaming ? <RevealText text={content} /> : content}
@@ -90,8 +90,8 @@ export function MessageBlock({
  */
 export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
   return (
-    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border-2 border-dashed border-sealed bg-sealed/10 px-4 py-3">
-      <span className="size-2.5 shrink-0 border-2 border-line bg-sealed" aria-hidden />
+    <article className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-card border border-dashed border-sealed bg-sealed/10 px-4 py-3">
+      <span className="size-2.5 shrink-0 border border-line bg-sealed rounded-control" aria-hidden />
       <p className="text-[13px] text-ink-3">
         <span className="text-sealed">Sealed.</span> Only your passphrase opens this — not us,
         not the AI.
@@ -100,7 +100,7 @@ export function SealedBlock({ onUnlock }: { onUnlock?: () => void }) {
         <button
           type="button"
           onClick={onUnlock}
-          className="ml-auto border border-sealed px-2.5 py-1 text-[13px] text-sealed transition-colors hover:bg-sealed/10"
+          className="ml-auto border border-sealed px-2.5 py-1 text-[13px] text-sealed transition-colors hover:bg-sealed/10 rounded-control"
         >
           Unlock
         </button>

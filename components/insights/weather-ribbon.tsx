@@ -43,7 +43,7 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden border border-line-faint">
+      <div className="overflow-hidden border border-line-faint rounded-control">
         <svg
           viewBox={`0 0 ${n} ${VIEW_H}`}
           preserveAspectRatio="none"
@@ -82,7 +82,7 @@ export function WeatherRibbon({ sessions }: { sessions: SessionSummary[] }) {
           <>
             <Link
               href={`/session/${active.id}`}
-              className="font-serif text-[17px] text-ink underline-offset-2 hover:underline"
+              className="font-serif text-[16px] text-ink underline-offset-2 hover:underline"
             >
               {active.title ?? 'Untitled'}
             </Link>

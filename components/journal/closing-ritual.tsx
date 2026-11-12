@@ -61,7 +61,7 @@ export function InsightReveal({ insights }: { insights: Insights }) {
         {/* The page head already prints the headword; this section is headed by
             what it is, and the title is kept only for screen readers. */}
         <Card i={0}>
-          <div className="flex items-center gap-2 border-b-2 border-line pb-2">
+          <div className="flex items-center gap-2 border-b border-line pb-2">
             <h2 className="label">
               Distilled<span className="sr-only">: {title}</span>
             </h2>
@@ -79,7 +79,7 @@ export function InsightReveal({ insights }: { insights: Insights }) {
               {bullets.map((b, i) => (
                 <li key={i} className="grid grid-cols-[14px_1fr] gap-3 text-[13px] text-ink-2">
                   {/* A square, not a bullet. Round dots belong to the old system. */}
-                  <span aria-hidden className="mt-[7px] size-2 bg-accent" />
+                  <span aria-hidden className="mt-[7px] size-2 shrink-0 rounded-full bg-accent" />
                   <span>{b}</span>
                 </li>
               ))}
@@ -93,7 +93,7 @@ export function InsightReveal({ insights }: { insights: Insights }) {
             <span className="chip-brut bg-surface text-ink">
               <span
                 aria-hidden
-                className="size-2 border border-line"
+                className="size-2 border border-line rounded-control"
                 style={{ background: moodColor(mood) }}
               />
               {mood.label}
@@ -127,7 +127,7 @@ export function InsightReveal({ insights }: { insights: Insights }) {
                 thing here asking you to DO something. */}
             <div className="plate bg-pop p-5 text-[#1b1a16]">
               <p className="label !text-[#1b1a16]">One thing to try</p>
-              <p className="mt-1.5 text-[17px] font-medium leading-relaxed">
+              <p className="mt-1.5 text-[16px] font-medium leading-relaxed">
                 {suggestedExperiment}
               </p>
             </div>

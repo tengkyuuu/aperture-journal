@@ -114,7 +114,7 @@ export function CommandPalette({ sessions }: { sessions: SessionSummary[] }) {
           onKeyDown={onInputKey}
           placeholder="Jump to a session or a page…"
           aria-label="Search sessions and pages"
-          className="w-full bg-transparent py-4 text-[17px] outline-none placeholder:text-ink-3"
+          className="w-full bg-transparent py-4 text-[16px] outline-none placeholder:text-ink-3"
         />
       </div>
 

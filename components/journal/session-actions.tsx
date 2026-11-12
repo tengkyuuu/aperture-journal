@@ -119,12 +119,12 @@ export function SessionActions({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && setEditing(false)}
             maxLength={120}
-            className="min-w-0 flex-1 rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] outline-none"
+            className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3 py-1.5 text-[13px] outline-none"
           />
           <button
             type="submit"
             disabled={busy}
-            className="brut-press-sm rounded-control border-2 border-line bg-accent px-3 py-1.5 text-[13px] font-bold uppercase text-on-accent disabled:opacity-40"
+            className="brut-press-sm rounded-control border border-line bg-accent px-3 py-1.5 text-[13px] font-semibold text-on-accent disabled:opacity-40"
           >
             Save
           </button>
@@ -145,7 +145,7 @@ export function SessionActions({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="brut-press-sm rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-ink"
+              className="brut-press-sm rounded-control border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink"
             >
               Rename
             </button>
@@ -158,7 +158,7 @@ export function SessionActions({
               setFailure(null);
               dialogRef.current?.showModal();
             }}
-            className="brut-press-sm ml-auto rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-danger"
+            className="brut-press-sm ml-auto rounded-control border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-danger"
           >
             Delete entry
           </button>
@@ -180,7 +180,7 @@ export function SessionActions({
         <div className="flex flex-col gap-4 p-6">
           <div>
             <span className="chip-brut bg-danger">Cannot be undone</span>
-            <h2 className="mt-3 text-[27px] font-bold uppercase leading-tight">Delete this entry</h2>
+            <h2 className="mt-3 text-[30px] font-semibold leading-tight">Delete this entry</h2>
           </div>
 
           <p className="text-[13px] leading-relaxed text-ink-2">
@@ -199,7 +199,7 @@ export function SessionActions({
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="DELETE"
-              className="rounded-control border-2 border-line bg-surface px-3 py-2 font-mono text-[13px] outline-none"
+              className="rounded-control border border-line bg-surface px-3 py-2 font-mono text-[13px] outline-none"
             />
           </div>
 
@@ -221,7 +221,7 @@ export function SessionActions({
               type="button"
               onClick={remove}
               disabled={confirm !== 'DELETE' || busy}
-              className="brut-press-sm rounded-control border-2 border-danger bg-surface px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-danger disabled:pointer-events-none disabled:opacity-30"
+              className="brut-press-sm rounded-control border border-danger bg-surface px-4 py-2 text-[13px] font-semibold text-danger disabled:pointer-events-none disabled:opacity-30"
             >
               {busy ? 'Deleting…' : 'Delete'}
             </button>

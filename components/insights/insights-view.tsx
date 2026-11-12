@@ -82,15 +82,15 @@ export function InsightsView({ sessions }: { sessions: SessionSummary[] }) {
           ) : null}
         </div>
 
-        <ul className="flex flex-col border-t-2 border-line">
+        <ul className="flex flex-col border-t border-line">
           {filtered.map((s) => (
             <li key={s.id} className="border-b border-line-faint">
               <Link href={`/session/${s.id}`} className="group block py-3">
-                <p className="m-0 text-[17px] leading-snug">
-                  <span className="font-bold text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px]">
+                <p className="m-0 text-[16px] leading-snug">
+                  <span className="font-semibold text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px]">
                     {s.title ?? 'Untitled'}
                   </span>
-                  <span className="italic text-ink-2"> {(MODE_LABELS[s.mode] ?? s.mode).toLowerCase()}.</span>
+                  <span className="ml-2 inline-block rounded-full bg-sunken px-2 py-0.5 align-middle text-[12px] font-normal text-ink-3">{MODE_LABELS[s.mode] ?? s.mode}</span>
                 </p>
                 <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-3">
                   {s.mood ? (

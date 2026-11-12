@@ -167,7 +167,7 @@ export function EchoCards({
             <div className="min-w-0 flex-1">
               <span className="chip-brut border-rubric text-rubric">You&rsquo;ve been here</span>
 
-              <p className="mt-2.5 truncate text-[17px] font-bold text-ink">
+              <p className="mt-2.5 truncate text-[16px] font-semibold text-ink">
                 {echo.title}
               </p>
               <p className="label mt-1">{relativeTime(echo.startedAt)}</p>
@@ -196,7 +196,7 @@ export function EchoCards({
 
           <Link
             href={`/session/${echo.sessionId}`}
-            className="brut-press-sm mt-3.5 inline-block rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-ink"
+            className="brut-press-sm mt-3.5 inline-block rounded-control border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink"
           >
             Read it
           </Link>

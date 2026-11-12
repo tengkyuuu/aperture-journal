@@ -8,7 +8,6 @@ import { failureFromThrown, type Failure } from '@/lib/client/errors';
 import { Notice } from '@/components/feedback/notice';
 import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { PixelLoader } from '@/components/shell/pixel-loader';
-import { GuideWords } from '@/components/lexicon/primitives';
 
 /**
  * The front door.
@@ -56,7 +55,6 @@ export default function SignInPage() {
           one sentence of what this is, the one action, and the three promises
           set as entries. */}
       <div className="w-full max-w-md">
-        <GuideWords first="Aperture" last="Sign in" page="A private journal" />
 
         {/* The logo is the one full-colour picture in the system: shown as-is,
             framed like a plate, never recoloured. */}
@@ -72,13 +70,13 @@ export default function SignInPage() {
           />
         </div>
 
-        <h1 className="mt-6 text-balance text-[27px] font-bold leading-tight tracking-[-0.005em] text-ink">
+        <h1 className="mt-6 text-balance text-[30px] font-semibold leading-tight tracking-[-0.005em] text-ink">
           A private place to think.
         </h1>
 
         {/* The headline is a promise; this says what the thing actually does,
             for someone who was sent a link and has never heard of it. */}
-        <p className="mt-3 text-[17px] leading-relaxed text-ink-2">
+        <p className="mt-3 text-[16px] leading-relaxed text-ink-2">
           A journal you think out loud in. Write about your day and an AI asks you questions to
           help you work it through. When you finish, it saves a short summary you can look back on.
         </p>
@@ -87,7 +85,7 @@ export default function SignInPage() {
           type="button"
           onClick={handleSignIn}
           disabled={busy}
-          className="brut-press mt-8 flex min-h-12 w-full items-center justify-center gap-3 border-2 border-line bg-accent px-4 py-3 text-[13px] font-bold uppercase tracking-[0.08em] text-on-accent disabled:pointer-events-none disabled:opacity-60"
+          className="brut-press mt-8 flex min-h-12 w-full items-center justify-center gap-3 border border-line bg-accent px-4 py-3 text-[13px] font-semibold text-on-accent disabled:pointer-events-none disabled:opacity-60 rounded-control"
         >
           {busy ? (
             <PixelLoader size="sm" tone="current" />
@@ -102,20 +100,20 @@ export default function SignInPage() {
         {failure ? (
           <Notice failure={failure} onRetry={handleSignIn} retryLabel="Retry" className="mt-4" />
         ) : expired ? (
-          <p className="mt-4 border border-line bg-sunken px-3 py-2 text-[13px] text-ink-2">
+          <p className="mt-4 border border-line bg-sunken px-3 py-2 text-[13px] text-ink-2 rounded-control">
             Your session expired. Sign in again to pick up where you left off.
           </p>
         ) : null}
 
         {/* The three promises, set as entries: the word in bold, then its sense. */}
-        <dl className="mt-10 border-t-2 border-line">
+        <dl className="mt-10 border-t border-line">
           {[
             ['Yours alone', 'Every entry is stored under your account and nobody else’s.'],
             ['Sealed means sealed', 'Encrypted in this browser. We cannot read it. Neither can the AI.'],
             ['Nothing hidden', 'Everything sent to the AI is listed where you can see it.'],
           ].map(([title, body]) => (
             <div key={title} className="border-b border-line-faint py-3">
-              <dt className="text-[17px] font-bold leading-snug text-ink">{title}</dt>
+              <dt className="text-[16px] font-semibold leading-snug text-ink">{title}</dt>
               <dd className="m-0 mt-0.5 text-[13px] leading-relaxed text-ink-2">{body}</dd>
             </div>
           ))}

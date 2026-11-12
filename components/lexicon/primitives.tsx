@@ -3,38 +3,7 @@ import type { ReactNode } from 'react';
 import { Hint } from '@/components/guide/hint';
 import type { Term } from '@/components/guide/glossary';
 
-/**
- * The Lexicon's printed furniture. See DESIGN.md.
- *
- * Every page of a reference book tells you where you are before it tells you
- * anything else: the guide words at the head name the first and last thing on
- * the page. That is the job these do here: a friend who arrived from a link
- * always knows what span of their journal, or which part of a page, is in front
- * of them.
- */
-
-/** The head rule: first and last thing in view, the page's own name between. */
-export function GuideWords({
-  first,
-  last,
-  page,
-}: {
-  first: string;
-  last: string;
-  page?: string;
-}) {
-  return (
-    // On a phone there is room for the two guide words or the page name, not
-    // all three: the guide words win, since they are the ones that orient.
-    <div className="grid grid-cols-2 items-baseline gap-3 border-b-2 border-line pb-2 sm:grid-cols-[1fr_auto_1fr]">
-      <span className="label min-w-0 text-balance">{first}</span>
-      <span className="hidden text-[13px] italic text-ink sm:inline">{page ?? ''}</span>
-      <span className="label min-w-0 text-balance text-right">{last}</span>
-    </div>
-  );
-}
-
-/** Guide words, the page title (the only 27px text), and the one-sentence lede. */
+/** The page title (serif) and its one-sentence lede. first/last/page are accepted for old callers and ignored. */
 export function PageHead({
   first,
   last,
@@ -50,11 +19,10 @@ export function PageHead({
 }) {
   return (
     <header className="mb-8">
-      <GuideWords first={first} last={last} page={page} />
-      <h1 className="mt-8 text-balance text-[27px] font-bold leading-tight tracking-[-0.005em] text-ink">
+      <h1 className="text-balance text-[32px] leading-tight text-ink sm:text-[36px]">
         {title}
       </h1>
-      {children ? <div className="prose-journal mt-3 text-ink-2">{children}</div> : null}
+      {children ? <div className="mt-2 max-w-[62ch] text-[16px] leading-relaxed text-ink-2">{children}</div> : null}
     </header>
   );
 }
@@ -102,26 +70,22 @@ export function Plate({
 }) {
   return (
     <figure
-      className={`plate m-0 px-5 pb-5 pt-6 sm:px-7 ${tone === 'chrome' ? 'bg-pop text-[#1b1a16]' : ''}`}
+      className={`plate m-0 px-5 pb-5 pt-5 sm:px-6 ${tone === 'chrome' ? 'bg-pop text-[#1b1a16]' : ''}`}
     >
       <div className="relative mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div className="flex items-center gap-2">
-          <h2 className="text-[17px] font-bold leading-snug">{title}</h2>
+          <h2 className="text-[16px] font-semibold leading-snug">{title}</h2>
           {term ? <Hint term={term} /> : null}
         </div>
         <div className="flex items-baseline gap-3">
           {aside}
-          {number ? (
-            <span className={`label ${tone === 'chrome' ? '!text-[#1b1a16]' : ''}`}>
-              Plate {number}
-            </span>
-          ) : null}
+          {null}
         </div>
       </div>
       <div className="relative">{children}</div>
       {caption ? (
         <figcaption
-          className={`relative mt-4 text-[13px] italic leading-relaxed ${
+          className={`relative mt-4 text-[13px] leading-relaxed ${
             tone === 'chrome' ? 'text-[#1b1a16]' : 'text-ink-3'
           }`}
         >

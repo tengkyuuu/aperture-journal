@@ -297,7 +297,7 @@ export function Tour() {
       {rect ? (
         <div
           aria-hidden
-          className="absolute rounded-card border-2 border-accent transition-[top,left,width,height] duration-200 ease-out"
+          className="absolute rounded-card border border-accent transition-[top,left,width,height] duration-200 ease-out"
           style={{
             top: rect.top - PAD,
             left: rect.left - PAD,
@@ -334,7 +334,7 @@ export function Tour() {
           </button>
         </div>
 
-        <h2 id="tour-title" className="mt-2 text-[17px] font-bold leading-tight tracking-tight">
+        <h2 id="tour-title" className="mt-2 text-[16px] font-semibold leading-tight tracking-tight">
           {step.title}
         </h2>
         <div
@@ -350,7 +350,7 @@ export function Tour() {
             {steps.map((s, i) => (
               <span
                 key={s.target}
-                className={`size-2 border border-line ${i <= index ? 'bg-accent' : 'bg-transparent'}`}
+                className={`size-2 border border-line rounded-control ${i <= index ? 'bg-accent' : 'bg-transparent'}`}
               />
             ))}
           </div>
@@ -372,7 +372,7 @@ export function Tour() {
               // End where the tour said to begin: in the writing.
               findTarget('composer')?.querySelector('textarea')?.focus();
             }}
-            className="brut-press-sm rounded-control border-2 border-line bg-accent px-4 py-1.5 text-[13px] font-bold uppercase tracking-wide text-on-accent"
+            className="brut-press-sm rounded-control border border-line bg-accent px-4 py-1.5 text-[13px] font-semibold text-on-accent"
           >
             {last ? 'Start writing' : 'Next'}
           </button>

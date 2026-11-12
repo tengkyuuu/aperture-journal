@@ -29,20 +29,20 @@ export function RecentSessions({ sessions }: { sessions: SessionSummary[] }) {
         </Link>
       </div>
 
-      <ul className="flex flex-col border-t-2 border-line">
+      <ul className="flex flex-col border-t border-line">
         {sessions.map((s) => (
           <li key={s.id} className="border-b border-line-faint">
             <Link href={`/session/${s.id}`} className="group block py-3">
-              <p className="m-0 text-[17px] leading-snug">
+              <p className="m-0 text-[16px] leading-snug">
                 <span
-                  className={`font-bold group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px] ${
+                  className={`font-semibold group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px] ${
                     s.title && !s.sealed ? 'text-ink' : 'text-ink-3'
                   }`}
                 >
                   {s.sealed ? 'Sealed entry' : (s.title ?? 'Untitled')}
                 </span>
                 {!s.sealed ? (
-                  <span className="italic text-ink-2"> {(MODE_LABELS[s.mode] ?? s.mode).toLowerCase()}.</span>
+                  <span className="ml-2 inline-block rounded-full bg-sunken px-2 py-0.5 align-middle text-[12px] font-normal text-ink-3">{MODE_LABELS[s.mode] ?? s.mode}</span>
                 ) : null}
               </p>
 

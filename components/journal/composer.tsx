@@ -81,36 +81,30 @@ export function Composer({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* ── Mode: set like the part of speech after a headword ─────────── */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+      {/* ── Mode: how the AI talks back, as a row of soft pills ────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div
           data-tour="modes"
           role="group"
           aria-label="How the AI talks back"
-          className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[17px] sm:gap-x-1"
+          className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-sunken p-1 [scrollbar-width:none]"
         >
-          {MODES.map((m, i) => {
+          {MODES.map((m) => {
             const on = mode === m;
             return (
-              <span key={m} className="inline-flex items-baseline">
-                {i > 0 ? (
-                  <span aria-hidden className="hidden px-1.5 text-ink-3 sm:inline">
-                    ·
-                  </span>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => onModeChange(m)}
-                  aria-pressed={on}
-                  className={`border-b-2 pb-0.5 italic transition-colors ${
-                    on
-                      ? 'border-line font-bold text-ink'
-                      : 'border-transparent text-ink-2 hover:border-line-faint hover:text-ink'
-                  }`}
-                >
-                  {MODE_LABELS[m].toLowerCase()}.
-                </button>
-              </span>
+              <button
+                key={m}
+                type="button"
+                onClick={() => onModeChange(m)}
+                aria-pressed={on}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[14px] transition-colors ${
+                  on
+                    ? 'bg-surface font-semibold text-ink shadow-[var(--shadow-ambient)]'
+                    : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                {MODE_LABELS[m]}
+              </button>
             );
           })}
         </div>
@@ -120,27 +114,21 @@ export function Composer({
             type="button"
             onClick={onEnd}
             title="Finish this conversation and turn it into a summary"
-            className="brut-press-sm border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-[0.08em] text-ink"
+            className="brut-press-sm border border-line-strong bg-surface px-3.5 py-1.5 text-[14px] font-semibold text-ink"
           >
             End session
-            <span className="ml-1.5 text-ink-3 [@media(pointer:coarse)]:hidden">{mod}E</span>
+            <span className="ml-1.5 font-normal text-ink-3 [@media(pointer:coarse)]:hidden">{mod}E</span>
           </button>
         ) : null}
       </div>
 
-      <p className="text-[13px] leading-relaxed text-ink-3">
-        <i className="text-ink-2">{MODE_LABELS[mode].toLowerCase()}.</i> {MODE_HINTS[mode]}
-      </p>
+      <p className="text-[13px] leading-relaxed text-ink-3">{MODE_HINTS[mode]}</p>
 
-      {/* ── The open page ───────────────────────────────────────────────
-          Not a box: a ruled page, headed by a heavy rule and closed by a
-          hairline, with faint writing lines at the text's own leading. An
-          empty entry gets a good part of the screen, the way a notebook
-          opens to a blank page rather than a field. */}
+      {/* ── The page: a soft card the writing sits in. An empty entry gets a
+          good part of the screen, the way a notebook opens to a blank page. */}
       <div
         data-tour="composer"
-        className="border-y border-line border-t-2 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_calc(1.7em-1px),var(--line-subtle)_calc(1.7em-1px),var(--line-subtle)_1.7em)] bg-[length:100%_1.7em] bg-local text-[17px] focus-within:border-t-[3px]"
-        style={{ backgroundPositionY: '0.75rem' }}
+        className="field rounded-card border bg-surface px-4 py-2 shadow-[var(--shadow-brut)] transition-shadow focus-within:border-accent focus-within:shadow-[var(--shadow-brut-lg)]"
       >
         <textarea
           ref={ref}
@@ -156,8 +144,8 @@ export function Composer({
           disabled={disabled}
           placeholder={placeholder ?? 'Write something…'}
           aria-label="Your entry"
-          className={`prose-journal block w-full max-w-none resize-none bg-transparent px-1 pt-3 text-ink outline-none placeholder:text-ink-3 disabled:opacity-50 ${
-            roomy ? 'min-h-[9rem] sm:min-h-[38vh]' : 'min-h-[7rem]'
+          className={`prose-journal block w-full max-w-none resize-none bg-transparent pt-2 text-ink outline-none placeholder:text-ink-3 focus-visible:outline-none disabled:opacity-50 ${
+            roomy ? 'min-h-[9rem] sm:min-h-[34vh]' : 'min-h-[6rem]'
           }`}
         />
       </div>
@@ -180,7 +168,7 @@ export function Composer({
           {echoArmed ? (
             <span
               title="When you pause, this draft is sent to the AI search model to find older entries about the same thing. Turn it off in Profile."
-              className="inline-flex items-center gap-1 font-bold text-ink-2"
+              className="inline-flex items-center gap-1 font-semibold text-ink-2"
             >
               <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-sealed" />
               echoes on
@@ -195,7 +183,7 @@ export function Composer({
           <button
             type="button"
             onClick={onStop}
-            className="brut-press-sm min-h-10 border-2 border-danger bg-surface px-4 text-[13px] font-bold uppercase tracking-[0.08em] text-danger"
+            className="brut-press-sm min-h-10 border border-danger/40 bg-surface px-4 text-[14px] font-semibold text-danger"
           >
             Stop
           </button>
@@ -204,7 +192,7 @@ export function Composer({
             type="button"
             onClick={onSend}
             disabled={disabled || busy || !value.trim()}
-            className="brut-press-sm inline-flex min-h-10 items-center gap-2 border-2 border-line bg-accent px-5 text-[13px] font-bold uppercase tracking-[0.08em] text-on-accent transition-opacity disabled:pointer-events-none disabled:opacity-35"
+            className="brut-press-sm inline-flex min-h-10 items-center gap-2 bg-accent px-5 text-[14px] font-semibold text-on-accent transition-opacity disabled:pointer-events-none disabled:opacity-40"
           >
             {busy ? <PixelLoader size="sm" tone="current" /> : null}
             Send
@@ -217,7 +205,7 @@ export function Composer({
 
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="border border-line-faint px-1 font-sans text-[13px] font-bold not-italic tracking-[0.04em] text-ink-2">
+    <kbd className="rounded-md border border-line bg-surface px-1.5 font-sans text-[12px] font-medium not-italic text-ink-2">
       {children}
     </kbd>
   );

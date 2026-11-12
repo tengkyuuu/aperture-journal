@@ -78,13 +78,13 @@ export function ProfileView({
         <div className="flex flex-wrap items-center gap-4">
           <span
             aria-hidden
-            className="grid size-16 shrink-0 place-items-center rounded-card border-2 border-line bg-accent text-[17px] font-bold text-on-accent"
+            className="grid size-16 shrink-0 place-items-center rounded-card border border-line bg-accent text-[16px] font-semibold text-on-accent"
           >
             {initials(user.displayName, user.email)}
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[17px] font-bold leading-tight text-ink">
+            <p className="truncate text-[16px] font-semibold leading-tight text-ink">
               {user.displayName ?? 'You'}
             </p>
             <p className="truncate text-[13px] text-ink-2">{user.email}</p>
@@ -100,7 +100,7 @@ export function ProfileView({
               router.replace('/sign-in');
               router.refresh();
             }}
-            className="brut-press-sm rounded-control border-2 border-line bg-surface px-3 py-1.5 text-[13px] font-bold uppercase tracking-wide text-ink"
+            className="brut-press-sm rounded-control border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink"
           >
             Sign out
           </button>
@@ -147,7 +147,7 @@ export function ProfileView({
         <h2 className="label">Preferences</h2>
 
         <div className="rounded-card brut bg-surface p-5">
-          <p className="text-[13px] font-bold text-ink">Default mode</p>
+          <p className="text-[13px] font-semibold text-ink">Default mode</p>
           <p className="mt-1 text-[13px] leading-relaxed text-ink-3">
             Which companion a new entry starts in.
           </p>
@@ -155,7 +155,7 @@ export function ProfileView({
           <div
             role="group"
             aria-label="Default mode"
-            className="mt-3.5 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[17px]"
+            className="mt-3.5 inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-sunken p-1 [scrollbar-width:none]"
           >
             {MODES.map((m) => {
               const on = defaultMode === m;
@@ -171,13 +171,13 @@ export function ProfileView({
                     const ok = await save({ defaultMode: m }, 'mode');
                     if (!ok) setDefaultMode(prev);
                   }}
-                  className={`border-b-2 pb-0.5 italic transition-colors disabled:opacity-60 ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[14px] transition-colors disabled:opacity-60 ${
                     on
-                      ? 'border-line font-bold text-ink'
-                      : 'border-transparent text-ink-2 hover:border-line-faint hover:text-ink'
+                      ? 'bg-surface font-semibold text-ink shadow-[var(--shadow-ambient)]'
+                      : 'text-ink-2 hover:text-ink'
                   }`}
                 >
-                  {MODE_LABELS[m].toLowerCase()}.
+                  {MODE_LABELS[m]}
                 </button>
               );
             })}
@@ -198,7 +198,7 @@ export function ProfileView({
             className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
           />
           <span>
-            <span className="block text-[13px] font-bold text-ink">Always reduce motion</span>
+            <span className="block text-[13px] font-semibold text-ink">Always reduce motion</span>
             <span className="mt-1 block text-[13px] leading-relaxed text-ink-3">
               Removes the press travel, the tilt, and the ceremony animations. Your operating
               system&rsquo;s setting is already respected — this forces it on regardless.
@@ -231,7 +231,7 @@ export function ProfileView({
               className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
             />
             <span>
-              <span className="block text-[13px] font-bold text-ink">
+              <span className="block text-[13px] font-semibold text-ink">
                 Echoes — tell me when I&rsquo;ve been here before
               </span>
               <span className="mt-1 block text-[13px] leading-relaxed text-ink-3">
@@ -244,7 +244,7 @@ export function ProfileView({
 
           <ul className="mt-3.5 flex flex-col gap-1.5 border-t border-line pt-3.5 text-[13px] leading-relaxed text-ink-2">
             <li>
-              <strong className="font-bold text-ink">This sends writing you have not
+              <strong className="font-semibold text-ink">This sends writing you have not
               submitted.</strong>{' '}
               A draft you might delete. That is why it is off until you turn it on.
             </li>
@@ -288,11 +288,11 @@ export function ProfileView({
         <div className="grid gap-3 sm:grid-cols-2">
           <Link
             href="/vault"
-            className="brut-press-sm flex items-start gap-3 rounded-card border-2 border-line bg-surface p-4"
+            className="brut-press-sm flex items-start gap-3 rounded-card border border-line bg-surface p-4"
           >
             <IconVault className="mt-0.5 size-5 shrink-0 text-sealed" />
             <span>
-              <span className="block text-[13px] font-bold text-ink">Vault</span>
+              <span className="block text-[13px] font-semibold text-ink">Vault</span>
               <span className="mt-0.5 block text-[13px] text-ink-3">
                 {user.vault
                   ? `${stats.sealedSessions} sealed ${stats.sealedSessions === 1 ? 'entry' : 'entries'}`
@@ -303,11 +303,11 @@ export function ProfileView({
 
           <Link
             href="/security"
-            className="brut-press-sm flex items-start gap-3 rounded-card border-2 border-line bg-surface p-4"
+            className="brut-press-sm flex items-start gap-3 rounded-card border border-line bg-surface p-4"
           >
             <IconSecurity className="mt-0.5 size-5 shrink-0 text-accent" />
             <span>
-              <span className="block text-[13px] font-bold text-ink">Security &amp; privacy</span>
+              <span className="block text-[13px] font-semibold text-ink">Security &amp; privacy</span>
               <span className="mt-0.5 block text-[13px] text-ink-3">
                 {stats.aiCalls} model {stats.aiCalls === 1 ? 'call' : 'calls'} ·{' '}
                 {stats.estCostUsd < 0.01 ? '<$0.01' : `$${stats.estCostUsd.toFixed(2)}`} · export

@@ -8,7 +8,7 @@ related_targets: []
 # App-wide surface brief: Aperture redesign
 
 Scope: every signed-in surface plus sign-in. Mode: Operate. Audience: invited friends at a laptop, first-time, unaided.
-Status: design system APPROVED by the user ("Yes, apply it") and applied app-wide on branch lexicon-redesign.
+Status: SUPERSEDED (2026-11-12). The user found the Lexicon too sharp and hard to navigate and chose "Soft paper": cream paper, rounded cards, Newsreader + Figtree, rose accent, one labelled sidebar. DESIGN.md is the current system; the brief below is kept as history.
 
 ## Direction contract
 

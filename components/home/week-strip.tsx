@@ -99,7 +99,7 @@ export function WeekStrip({
                       <span
                         key={e.id}
                         aria-hidden
-                        className="block min-w-[6px] flex-1 border border-line"
+                        className="block min-w-[6px] flex-1 border border-line rounded-control"
                         style={{
                           height: Math.round(MIN_H + energy * (MAX_H - MIN_H)),
                           background: blockColor(e.mood!.valence),

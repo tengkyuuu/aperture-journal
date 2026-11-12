@@ -429,7 +429,7 @@ export function Canvas({
           <button
             type="button"
             onClick={requestSeal}
-            className="brut-press-sm inline-flex items-center gap-2 rounded-control border-2 border-sealed bg-surface px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-wide text-sealed"
+            className="brut-press-sm inline-flex items-center gap-2 rounded-control border border-sealed bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-sealed"
           >
             <IconVault className="size-3.5" />
             Seal this entry

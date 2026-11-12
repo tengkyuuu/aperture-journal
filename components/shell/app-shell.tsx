@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
-import { signOutEverywhere } from '@/lib/client/firebase';
 import { initials } from '@/lib/shared/format';
 import type { SessionSummary, UserProfile } from '@/lib/shared/types';
 
@@ -12,7 +11,6 @@ import { Toaster } from '@/components/feedback/toaster';
 import { openHelp } from '@/components/guide/events';
 import { Help } from '@/components/guide/help';
 import { Tour } from '@/components/guide/tour';
-import { ShoulderIndex } from '@/components/lexicon/shoulder-index';
 import { useOnline } from '@/hooks/use-online';
 
 import { CommandPalette } from './command-palette';
@@ -30,49 +28,165 @@ import { Timeline } from './timeline';
  * online — and there is no background sync here, so promising to send it later
  * would be a lie. It reports a fact and stops.
  */
-function OfflineChip({ compact = false }: { compact?: boolean }) {
+function OfflineChip() {
   return (
     <span
       role="status"
       title="No network. You can still write — sending is what stops."
-      className={
-        compact
-          ? 'grid size-9 place-items-center border border-rubric bg-surface text-[13px] font-bold uppercase text-rubric'
-          : 'chip-brut border-rubric text-rubric'
-      }
+      className="chip-brut border-danger/40 text-danger"
     >
-      {compact ? 'off' : 'offline'}
+      Offline
     </span>
   );
 }
 
+const MAIN = NAV.filter((n) => ['/today', '/insights', '/ask'].includes(n.href));
+const PRIVACY = NAV.filter((n) => ['/vault', '/security'].includes(n.href));
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 /**
- * A label that appears beside a rail icon the moment it is hovered or focused.
+ * Everything you can go to, in words.
  *
- * The rail used to rely on `title`, which the browser shows after a second's
- * stillness and never on keyboard focus — so six unlabeled glyphs were the
- * whole of the desktop navigation for anyone who did not already know them.
+ * The previous shell was an icon rail, a separate column of entries and a set
+ * of index tabs down the far edge: three navigation systems, two of them
+ * unlabelled. This is one list: a "New entry" button, the places, then your
+ * entries, then you. Used as the desktop sidebar and, unchanged, as the phone
+ * menu.
  */
-function RailTip({ children }: { children: React.ReactNode }) {
+function SidebarContent({
+  user,
+  sessions,
+  online,
+  onNavigate,
+  onClose,
+}: {
+  user: UserProfile;
+  sessions: SessionSummary[];
+  online: boolean;
+  onNavigate?: () => void;
+  onClose?: () => void;
+}) {
+  const pathname = usePathname();
+
+  const navLink = ({ href, label, Icon }: (typeof NAV)[number]) => {
+    const active = isActive(pathname, href);
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={onNavigate}
+        aria-current={active ? 'page' : undefined}
+        className={`flex items-center gap-3 rounded-control px-3 py-2 text-[14px] transition-colors ${
+          active
+            ? 'bg-accent-wash font-semibold text-accent'
+            : 'text-ink-2 hover:bg-sunken hover:text-ink'
+        }`}
+      >
+        <Icon className="size-[18px] shrink-0" />
+        {label}
+      </Link>
+    );
+  };
+
   return (
-    <span
-      aria-hidden
-      className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-control border-2 border-line bg-elevated px-2 py-1 text-[13px] font-medium text-ink opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-within:opacity-100"
-    >
-      {children}
-    </span>
+    // Short screens scroll the whole sidebar; tall ones give the entries the rest.
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex items-center gap-2.5 px-5 pb-4 pt-5">
+        <Link href="/today" onClick={onNavigate} className="flex items-center gap-2.5" aria-label="Aperture — home">
+          {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
+              WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
+          <img src="/logo-sm.webp" alt="" width={1269} height={1092} className="w-8" />
+          <span className="font-heading text-[20px] font-medium text-ink">Aperture</span>
+        </Link>
+        <div className="ml-auto flex items-center gap-1">
+          {!online ? <OfflineChip /> : null}
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close menu"
+              className="grid size-8 place-items-center rounded-control text-ink-3 hover:bg-sunken"
+            >
+              <IconClose />
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="px-3">
+        <Link
+          href="/today"
+          onClick={onNavigate}
+          className="brut-press flex items-center justify-center gap-2 bg-accent px-4 py-2.5 text-[14px] font-semibold text-on-accent"
+        >
+          <span aria-hidden className="text-[18px] leading-none">+</span>
+          New entry
+        </Link>
+      </div>
+
+      <nav aria-label="Main" data-tour="nav" className="mt-4 flex flex-col gap-0.5 px-3">
+        {MAIN.map(navLink)}
+        <p className="label mb-1 mt-4 px-3">Privacy</p>
+        {PRIVACY.map(navLink)}
+      </nav>
+
+      <div data-tour="sessions" className="mt-5 flex min-h-[220px] flex-1 flex-col border-t border-line-faint">
+        <Timeline sessions={sessions} onNavigate={onNavigate} />
+      </div>
+
+      {/* You, then Help and the theme as two small buttons. Sign out lives on
+          Profile, one click away, so this row stays a single line. */}
+      <div className="border-t border-line-faint p-3">
+        <div className="flex items-center gap-1">
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            aria-current={isActive(pathname, '/profile') ? 'page' : undefined}
+            className={`flex min-w-0 flex-1 items-center gap-3 rounded-control px-2 py-1.5 transition-colors ${
+              isActive(pathname, '/profile') ? 'bg-accent-wash' : 'hover:bg-sunken'
+            }`}
+          >
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-wash text-[12px] font-semibold text-accent">
+              {initials(user.displayName, user.email)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[14px] font-medium text-ink">
+                {user.displayName ?? 'Profile'}
+              </span>
+              <span className="block truncate text-[12px] text-ink-3">Profile &amp; settings</span>
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.();
+              openHelp();
+            }}
+            data-tour="help"
+            aria-label="Help and tour"
+            title="Help and tour"
+            className="grid size-9 shrink-0 place-items-center rounded-control text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <IconHelp />
+          </button>
+          <ThemeToggle />
+        </div>
+      </div>
+    </div>
   );
 }
 
 /**
  * The app shell.
  *
- *   ≥1024  rail (72) · timeline (320) · canvas
- *   ≥768   rail (72) · canvas          — timeline behind a menu button
- *   <768   canvas + bottom tab bar     — timeline behind a menu button
+ *   ≥768   sidebar (272) · canvas
+ *   <768   top bar + bottom tab bar; the sidebar opens as a menu
  *
- * The canvas keeps a 68ch measure at every width. Chrome recedes; the writing
- * is the interface.
+ * The canvas keeps a comfortable measure at every width. Chrome recedes; the
+ * writing is the interface.
  */
 export function AppShell({
   user,
@@ -84,11 +198,10 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const online = useOnline();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Any navigation closes the sheet — otherwise it lingers over the new page.
+  // Any navigation closes the menu — otherwise it lingers over the new page.
   useEffect(() => {
     setSheetOpen(false);
   }, [pathname]);
@@ -98,8 +211,7 @@ export function AppShell({
    *
    * The OS setting is already honoured by a media query in globals.css. This is
    * the override for people whose system does not expose one, or who want it in
-   * this app only — a real gap, since the OS toggle is buried on several
-   * platforms and absent on some.
+   * this app only.
    */
   useEffect(() => {
     const root = document.documentElement;
@@ -116,19 +228,9 @@ export function AppShell({
     return () => window.removeEventListener('keydown', onKey);
   }, [sheetOpen]);
 
-  async function handleSignOut() {
-    await signOutEverywhere();
-    router.replace('/sign-in');
-    router.refresh();
-  }
-
   return (
     <div className="flex min-h-dvh">
-      {/*
-        Skip link. Tabbing into this app otherwise means traversing a 5-item
-        rail and a 50-item session list before reaching the writing — which is
-        the one thing everybody came for. Visually hidden until focused.
-      */}
+      {/* Skip link: straight to the writing, past the sidebar. */}
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-control focus:bg-accent focus:px-4 focus:py-2 focus:text-[13px] focus:font-medium focus:text-on-accent"
@@ -136,118 +238,32 @@ export function AppShell({
         Skip to writing
       </a>
 
-      {/* ── Rail ─────────────────────────────────────────────────────────── */}
-      {/* z-30: the rail's labels overhang the timeline beside it, and two
-          sticky siblings otherwise paint in DOM order — the timeline on top. */}
-      <aside className="sticky top-0 z-30 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r border-line bg-surface py-4 md:flex">
-        <Link
-          href="/today"
-          aria-label="Aperture — home"
-          className="mb-3 grid size-10 place-items-center border border-line bg-canvas"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
-              WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
-          <img src="/logo-sm.webp" alt="" width={1269} height={1092} className="w-8" />
-        </Link>
-
-        <nav aria-label="Main" data-tour="nav" className="flex flex-col items-center gap-1">
-          {NAV.map(({ href, label, Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-label={label}
-                aria-current={active ? 'page' : undefined}
-                className={`group relative grid size-10 place-items-center rounded-control transition-colors ${
-                  active ? 'bg-accent-wash text-accent' : 'text-ink-3 hover:bg-sunken hover:text-ink'
-                }`}
-              >
-                <Icon />
-                <RailTip>{label}</RailTip>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-auto flex flex-col items-center gap-1">
-          {/*
-            A chip, not a banner. A banner across the top would push the
-            composer down and take writing space at precisely the moment
-            nothing can be done about the network — the writing still works,
-            only the sending does not.
-          */}
-          {!online ? <OfflineChip compact /> : null}
-          <button
-            type="button"
-            onClick={openHelp}
-            aria-label="Help and tour"
-            data-tour="help"
-            className="group relative grid size-10 place-items-center rounded-control text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
-          >
-            <IconHelp />
-            <RailTip>Help &amp; tour</RailTip>
-          </button>
-          <span className="group relative">
-            <ThemeToggle />
-            <RailTip>Light / dark</RailTip>
-          </span>
-          {/* It signs you out on click, which nothing about an avatar says —
-              so the label says it, instantly, before the click. */}
-          <button
-            type="button"
-            onClick={handleSignOut}
-            aria-label="Sign out"
-            className="group relative grid size-9 place-items-center border border-line text-[13px] font-medium text-ink-2 transition-colors hover:border-line-strong"
-          >
-            {initials(user.displayName, user.email)}
-            <RailTip>Sign out{user.email ? ` · ${user.email}` : ''}</RailTip>
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Timeline (persistent at lg) ──────────────────────────────────── */}
-      <aside
-        data-tour="sessions"
-        className="sticky top-0 hidden h-dvh w-[320px] shrink-0 border-r border-line bg-surface lg:block"
-      >
-        <Timeline sessions={sessions} />
+      {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+      <aside className="sticky top-0 hidden h-dvh w-[272px] shrink-0 border-r border-line bg-canvas md:block">
+        <SidebarContent user={user} sessions={sessions} online={online} />
       </aside>
 
       {/* ── Canvas ───────────────────────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-canvas px-4 py-2.5 lg:hidden">
+        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-canvas/90 px-4 py-2.5 backdrop-blur-sm md:hidden">
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
-            aria-label="Open sessions"
+            aria-label="Open menu"
             aria-expanded={sheetOpen}
-            data-tour="sessions"
             className="grid size-9 place-items-center rounded-control text-ink-2 transition-colors hover:bg-sunken"
           >
             <IconMenu />
           </button>
-          {/* Framed like the rail's logo: the one full-colour picture sits in its own square. */}
-          <span className="border border-line bg-canvas p-0.5">
+          <Link href="/today" className="flex items-center gap-2" aria-label="Aperture — home">
             {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
                 WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
-            <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="block h-6 w-auto" />
-          </span>
-          <div className="ml-auto flex items-center gap-2">
+            <img src="/logo-sm.webp" alt="" width={1269} height={1092} className="block h-6 w-auto" />
+            <span className="font-heading text-[18px] font-medium text-ink">Aperture</span>
+          </Link>
+          <div className="ml-auto flex items-center gap-1">
             {!online ? <OfflineChip /> : null}
-            {/* Below md there is no rail, so Help lives up here. */}
-            <button
-              type="button"
-              onClick={openHelp}
-              aria-label="Help and tour"
-              data-tour="help"
-              className="grid size-9 place-items-center rounded-control text-ink-2 transition-colors hover:bg-sunken md:hidden"
-            >
-              <IconHelp />
-            </button>
-            <span className="md:hidden">
-              <ThemeToggle />
-            </span>
+            <ThemeToggle />
           </div>
         </header>
 
@@ -256,31 +272,32 @@ export function AppShell({
         </main>
 
         {/*
-          Bottom tab bar below md, where there is no rail.
-
-          Capped at FIVE. Six targets on a phone bottom bar puts each one under
-          the 44px minimum on a small screen, and the nav-limit rule exists for
-          exactly that reason. Profile is the one that drops — it is reachable
-          from the sheet, and it is not somewhere you go mid-thought.
+          Bottom tab bar below md. Capped at FIVE: six targets on a phone bar
+          puts each one under the 44px minimum. Profile is in the menu.
         */}
         <nav
           aria-label="Main"
-          data-tour="nav"
-          className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-surface/95 backdrop-blur-sm md:hidden"
+          className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
         >
           {NAV.slice(0, 5).map(({ href, label, Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const active = isActive(pathname, href);
             return (
               <Link
                 key={href}
                 href={href}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[13px] transition-colors ${
-                  active ? 'text-accent' : 'text-ink-3'
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[12px] transition-colors ${
+                  active ? 'font-semibold text-accent' : 'text-ink-3'
                 }`}
               >
-                <Icon />
+                <span
+                  className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${
+                    active ? 'bg-accent-wash' : ''
+                  }`}
+                >
+                  <Icon />
+                </span>
                 <span className="truncate">{label.split(' ')[0]}</span>
               </Link>
             );
@@ -288,47 +305,23 @@ export function AppShell({
         </nav>
       </div>
 
-      {/* ── Timeline sheet, below lg ─────────────────────────────────────── */}
+      {/* ── Menu, below md ───────────────────────────────────────────────── */}
       {sheetOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            aria-label="Close sessions"
+            aria-label="Close menu"
             onClick={() => setSheetOpen(false)}
-            className="absolute inset-0 bg-black/40 animate-fade-in"
+            className="absolute inset-0 bg-black/30 animate-fade-in"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[min(320px,85vw)] flex-col border-r border-line bg-surface animate-rise-in">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- already a pre-sized
-                  WebP; next/image optimisation needs sharp at runtime and sharp is a devDependency. */}
-              <img src="/logo-sm.webp" alt="Aperture" width={1269} height={1092} className="h-6 w-auto" />
-              <button
-                type="button"
-                onClick={() => setSheetOpen(false)}
-                aria-label="Close"
-                className="grid size-8 place-items-center rounded-control text-ink-3 hover:bg-sunken"
-              >
-                <IconClose />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1">
-              <Timeline sessions={sessions} onNavigate={() => setSheetOpen(false)} />
-            </div>
-            <div className="flex flex-col gap-1 border-t border-line p-3">
-              <Link
-                href="/profile"
-                className="rounded-control px-3 py-2 text-[13px] font-bold uppercase tracking-wide text-ink-2 hover:bg-sunken hover:text-ink"
-              >
-                Profile
-              </Link>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="w-full rounded-control px-3 py-2 text-left text-[13px] text-ink-2 hover:bg-sunken"
-              >
-                Sign out
-              </button>
-            </div>
+          <div className="absolute inset-y-0 left-0 w-[min(300px,85vw)] rounded-r-[var(--radius-sheet)] bg-canvas shadow-[var(--shadow-sheet)] animate-rise-in">
+            <SidebarContent
+              user={user}
+              sessions={sessions}
+              online={online}
+              onNavigate={() => setSheetOpen(false)}
+              onClose={() => setSheetOpen(false)}
+            />
           </div>
         </div>
       ) : null}
@@ -337,10 +330,8 @@ export function AppShell({
       <Shortcuts />
       <Help />
       <Tour />
-      <ShoulderIndex sessions={sessions} />
       {/* One instance for the whole app. It lives above the routes so an
-          acknowledgement survives the navigation that caused it — deleting an
-          entry redirects to /today and the toast has to outlive that. */}
+          acknowledgement survives the navigation that caused it. */}
       <Toaster />
     </div>
   );

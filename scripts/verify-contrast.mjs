@@ -136,8 +136,10 @@ for (const scope of ['light', 'dark']) {
   for (const m of ['positive', 'negative', 'level']) check(m + ' mood ink on canvas', resolve(m, scope), canvas, 3, scope);
   check('danger text on canvas', danger, canvas, 4.5, scope);
 
-  // Borders are the entire visual system — they must clear the 3:1 UI bar.
-  check('border vs canvas', resolve('border-ink', scope), canvas, 3, scope);
+  // Everyday lines are decorative and deliberately faint. The outline of a
+  // text box is not: it is how you find the box, so it must clear 3:1.
+  check('text-box outline vs canvas', resolve('line-strong', scope), canvas, 3, scope);
+  check('text-box outline vs surface', resolve('line-strong', scope), surface, 3, scope);
 }
 
 console.log('');

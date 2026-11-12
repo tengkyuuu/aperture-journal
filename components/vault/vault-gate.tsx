@@ -119,7 +119,7 @@ export function VaultGate({
       <form onSubmit={submit} className="flex flex-col gap-5 p-6">
         <div>
           <p className="label text-sealed">{setup ? 'Create your vault' : 'Unlock'}</p>
-          <h2 className="mt-2 font-serif text-[27px] leading-tight">
+          <h2 className="mt-2 font-serif text-[30px] leading-tight">
             {setup ? 'One passphrase. No way back.' : 'Your passphrase'}
           </h2>
         </div>
@@ -155,7 +155,7 @@ export function VaultGate({
               {/* scaleX, not width. Animating width is a layout property —
                   it forces reflow on every frame, and this runs while someone
                   is typing, which is the worst possible moment for it. */}
-              <div className="h-1.5 flex-1 overflow-hidden border-2 border-line bg-sunken">
+              <div className="h-1.5 flex-1 overflow-hidden border border-line bg-sunken rounded-control">
                 <div
                   className={`h-full w-full origin-left ${barColor} transition-transform duration-200 ease-out`}
                   style={{ transform: `scaleX(${verdict.score / 3})` }}
@@ -241,7 +241,7 @@ export function VaultGate({
           <button
             type="submit"
             disabled={busy || !passphrase}
-            className="brut-press-sm border-2 border-line bg-accent px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-on-accent transition-opacity disabled:opacity-40"
+            className="brut-press-sm border border-line bg-accent px-4 py-2 text-[13px] font-semibold text-on-accent transition-opacity disabled:opacity-40 rounded-control"
           >
             {busy ? 'Working…' : setup ? 'Create vault' : 'Unlock'}
           </button>

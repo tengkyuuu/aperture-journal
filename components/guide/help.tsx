@@ -58,7 +58,7 @@ export function Help() {
     >
       <div className="flex flex-col gap-7 p-6 sm:p-7">
         <div className="flex items-start justify-between gap-4">
-          <h2 id="help-title" className="text-[27px] font-bold leading-tight tracking-tight">
+          <h2 id="help-title" className="text-[30px] font-semibold leading-tight tracking-tight">
             How Aperture works
           </h2>
           <button
@@ -73,7 +73,7 @@ export function Help() {
         <ol className="flex flex-col gap-3">
           {LOOP.map(([title, text], i) => (
             <li key={title} className="flex gap-3">
-              <span className="num grid size-7 shrink-0 place-items-center rounded-control border-2 border-line bg-accent text-[13px] font-bold text-on-accent">
+              <span className="num grid size-7 shrink-0 place-items-center rounded-control border border-line bg-accent text-[13px] font-semibold text-on-accent">
                 {i + 1}
               </span>
               <span className="text-[13px] leading-relaxed text-ink-2">
@@ -87,7 +87,7 @@ export function Help() {
           <button
             type="button"
             onClick={() => then(startTour)}
-            className="brut-press-sm rounded-control border-2 border-line bg-accent px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-on-accent"
+            className="brut-press-sm rounded-control border border-line bg-accent px-4 py-2 text-[13px] font-semibold text-on-accent"
           >
             Take the tour
           </button>
@@ -95,20 +95,20 @@ export function Help() {
           <button
             type="button"
             onClick={() => then(openShortcuts)}
-            className="brut-press-sm rounded-control border-2 border-line bg-surface px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-ink [@media(pointer:coarse)]:hidden"
+            className="brut-press-sm rounded-control border border-line bg-surface px-4 py-2 text-[13px] font-semibold text-ink [@media(pointer:coarse)]:hidden"
           >
             Keyboard shortcuts
           </button>
         </div>
 
         <section aria-labelledby="help-words" className="flex flex-col gap-3">
-          <h3 id="help-words" className="text-[17px] font-bold">
+          <h3 id="help-words" className="text-[16px] font-semibold">
             Words you will see
           </h3>
           <dl className="flex flex-col divide-y-2 divide-line/30">
             {GLOSSARY_ORDER.map((t) => (
               <div key={t} className="flex flex-col gap-0.5 py-2.5 sm:flex-row sm:gap-4">
-                <dt className="shrink-0 text-[13px] font-bold text-ink sm:w-36">
+                <dt className="shrink-0 text-[13px] font-semibold text-ink sm:w-36">
                   {GLOSSARY[t].word}
                 </dt>
                 <dd className="text-[13px] leading-relaxed text-ink-2">{GLOSSARY[t].plain}</dd>

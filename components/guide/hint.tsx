@@ -50,7 +50,7 @@ export function Hint({ term, align = 'left' }: { term: Term; align?: 'left' | 'r
         onClick={() => setPinned((p) => !p)}
         onFocus={() => setHover(true)}
         onBlur={() => setHover(false)}
-        className="grid size-[18px] place-items-center rounded-full border border-line bg-canvas font-sans text-[13px] font-bold leading-none text-ink transition-colors hover:bg-accent hover:text-on-accent focus-visible:bg-accent focus-visible:text-on-accent"
+        className="grid size-[18px] place-items-center rounded-full border border-line bg-canvas font-sans text-[13px] font-semibold leading-none text-ink transition-colors hover:bg-accent hover:text-on-accent focus-visible:bg-accent focus-visible:text-on-accent"
       >
         ?
       </button>
@@ -58,11 +58,11 @@ export function Hint({ term, align = 'left' }: { term: Term; align?: 'left' | 'r
         <span
           id={id}
           role="tooltip"
-          className={`absolute top-full z-40 mt-2 w-[min(280px,80vw)] sheet p-3 text-left font-sans text-[13px] font-normal leading-relaxed text-ink-2  animate-pop-in ${
+          className={`absolute top-full z-40 mt-2 w-[min(280px,80vw)] sheet p-3 text-left font-sans text-[13px] font-normal leading-relaxed text-ink-2 animate-pop-in ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
-          <span className="mb-1 block text-[13px] font-bold text-ink">{word}</span>
+          <span className="mb-1 block text-[13px] font-semibold text-ink">{word}</span>
           {plain}
         </span>
       ) : null}

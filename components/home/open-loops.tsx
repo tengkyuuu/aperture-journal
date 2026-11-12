@@ -29,14 +29,14 @@ export function OpenLoops({ loops }: { loops: OpenLoop[] }) {
         <Hint term="stillOpen" />
       </div>
 
-      <ul className="flex flex-col border-t-2 border-line">
+      <ul className="flex flex-col border-t border-line">
         {loops.map((loop, i) => (
           <li key={`${loop.sessionId}-${i}`} className="border-b border-line-faint">
             <Link
               href={`/session/${loop.sessionId}`}
               className="group flex flex-col gap-1 py-3"
             >
-              <span className="text-[17px] italic leading-snug text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px]">
+              <span className="text-[16px] leading-snug text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px]">
                 {loop.text}
               </span>
               <span className="flex items-center gap-1.5 text-[13px] text-ink-3">

@@ -11,7 +11,7 @@ export default function NotFound() {
   return (
     <main className="grid min-h-dvh place-items-center px-6">
       <div className="w-full max-w-sm">
-        <h1 className="mt-3 font-serif text-[27px] leading-tight tracking-tight text-ink">
+        <h1 className="mt-3 font-serif text-[30px] leading-tight tracking-tight text-ink">
           There is nothing at this address.
         </h1>
         <p className="prose-journal mt-4 text-ink-2">

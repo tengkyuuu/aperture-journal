@@ -30,7 +30,8 @@ import { embedOne, initAdmin } from './lib/providers.mjs';
 
 const args = process.argv.slice(2);
 const CLEAR = args.includes('--clear');
-const EMAIL = args[args.indexOf('--email') + 1];
+// indexOf is -1 when the flag is absent, and -1 + 1 would read args[0].
+const EMAIL = args.includes('--email') ? args[args.indexOf('--email') + 1] : undefined;
 
 initAdmin();
 const auth = getAuth();

@@ -1,21 +1,27 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import { Old_Standard_TT } from 'next/font/google';
+import { Figtree, Newsreader } from 'next/font/google';
 
 import './globals.css';
 
 /**
- * Type, "The Lexicon": one family for everything.
+ * Type, "Soft paper": two voices.
  *
- * Old Standard TT is a revival of the "Modern" faces nineteenth-century
- * dictionaries and reference books were set in. Rank comes from bold, italic
- * and capitals at three sizes, never from a second family or a bigger size.
+ * Newsreader, a gentle text serif, sets titles and the writing itself.
+ * Figtree, a friendly rounded-feeling sans, sets everything you operate.
  */
-const oldStandard = Old_Standard_TT({
+const display = Newsreader({
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['400', '500', '600'],
   style: ['normal', 'italic'],
-  variable: '--font-text',
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const ui = Figtree({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ui',
   display: 'swap',
 });
 
@@ -34,8 +40,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ebeeec' },
-    { media: '(prefers-color-scheme: dark)', color: '#131517' },
+    { media: '(prefers-color-scheme: light)', color: '#f7f2eb' },
+    { media: '(prefers-color-scheme: dark)', color: '#1a1614' },
   ],
 };
 
@@ -61,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="en"
       suppressHydrationWarning
-      className={oldStandard.variable}
+      className={`${display.variable} ${ui.variable}`}
     >
       <head>
         {/* suppressHydrationWarning: browsers blank a script's nonce attribute

@@ -104,7 +104,7 @@ export function AskView() {
           e.preventDefault();
           void ask(question);
         }}
-        className="flex items-center gap-2 rounded-card brut bg-surface px-3 py-2 transition-colors focus-within:border-line-strong"
+        className="field flex items-center gap-2 rounded-card brut bg-surface px-3 py-2 transition-colors focus-within:border-accent"
       >
         <IconAsk className="size-4 shrink-0 text-ink-3" />
         <input
@@ -114,7 +114,7 @@ export function AskView() {
           placeholder="Ask your journal something…"
           aria-label="Ask your journal"
           disabled={busy}
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-[17px] outline-none placeholder:text-ink-3"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-[16px] outline-none placeholder:text-ink-3"
         />
         <button
           type="submit"
@@ -137,7 +137,7 @@ export function AskView() {
                   setQuestion(s);
                   void ask(s);
                 }}
-                className="border border-line px-3 py-1.5 text-left text-[13px] italic text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
+                className="rounded-full border border-line bg-surface px-3.5 py-1.5 text-left text-[13px] text-ink-2 transition-colors hover:bg-sunken hover:text-ink rounded-control"
               >
                 {s}
               </button>
@@ -226,7 +226,7 @@ function CitedText({ text, citations }: { text: string; citations: Citation[] })
             key={i}
             href={`/session/${id}`}
             title={cite.title}
-            className="mx-0.5 align-super text-[13px] font-bold leading-none text-ultramarine no-underline hover:underline"
+            className="mx-0.5 align-super text-[13px] font-semibold leading-none text-ultramarine no-underline hover:underline"
           >
             {index}
           </Link>

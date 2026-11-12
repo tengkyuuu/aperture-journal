@@ -30,7 +30,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
       <div className="flex flex-wrap items-center gap-3 rounded-card brut bg-surface p-4">
         <span
           aria-hidden
-          className={`grid size-9 place-items-center border ${
+          className={`grid size-9 place-items-center border rounded-control ${
             unlocked ? 'border-sealed text-sealed' : 'border-line text-ink-3'
           }`}
         >
@@ -66,7 +66,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
           <button
             type="button"
             onClick={() => setGateOpen(true)}
-            className="brut-press-sm border-2 border-line bg-accent px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-wide text-on-accent"
+            className="brut-press-sm border border-line bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-on-accent rounded-control"
           >
             {vault.status === 'uninitialised' ? 'Create vault' : 'Unlock'}
           </button>
@@ -78,21 +78,21 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
         <p className="label mb-3">What sealing does</p>
         <ul className="flex flex-col gap-2.5 text-[13px] leading-relaxed text-ink-2">
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
+            <span aria-hidden className="mt-[11px] size-[6px] shrink-0 rounded-full bg-ink-3" />
             <span>
               Your passphrase never leaves this browser. It is turned into the key that locks your
               entries right here.
             </span>
           </li>
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
+            <span aria-hidden className="mt-[11px] size-[6px] shrink-0 rounded-full bg-ink-3" />
             <span>
               Each message is locked before it is sent, so our server only ever stores scrambled
               text it cannot open.
             </span>
           </li>
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
+            <span aria-hidden className="mt-[11px] size-[6px] shrink-0 rounded-full bg-ink-3" />
             <span>
               Its summary, mood and themes are <strong className="text-ink">deleted</strong>, so a
               sealed entry no longer appears in Insights, Ask your past or Echoes. Keeping them
@@ -100,7 +100,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
             </span>
           </li>
           <li className="grid grid-cols-[14px_1fr] gap-3">
-            <span aria-hidden className="mt-[11px] size-[6px] bg-ink" />
+            <span aria-hidden className="mt-[11px] size-[6px] shrink-0 rounded-full bg-ink-3" />
             <span className="text-ink-3">
               We can still see that the entry exists, when you wrote it and how many messages it
               has, but not what it says. Forget the passphrase and nobody can open it again.
@@ -138,7 +138,7 @@ export function VaultPanel({ sealed }: { sealed: SessionSummary[] }) {
                 >
                   <IconVault className="size-4 shrink-0 text-sealed" />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-serif text-[17px] text-ink">Sealed entry</span>
+                    <span className="block font-serif text-[16px] text-ink">Sealed entry</span>
                     <span className="block text-[13px] text-ink-3">
                       <span className="num">{relativeTime(s.startedAt)}</span> ·{' '}
                       {s.messageCount} messages

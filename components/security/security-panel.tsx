@@ -30,7 +30,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   return (
     <div className="rounded-card brut bg-surface px-4 py-3.5">
       <p className="label">{label}</p>
-      <p className="num mt-1.5 font-serif text-[27px] leading-none text-ink">{value}</p>
+      <p className="num mt-1.5 font-serif text-[30px] leading-none text-ink">{value}</p>
       {sub ? <p className="mt-1 text-[13px] text-ink-3">{sub}</p> : null}
     </div>
   );
@@ -190,7 +190,7 @@ export function SecurityPanel({
                 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-card brut bg-surface px-4 py-3"
               >
                 <span
-                  className={`border px-2 py-0.5 text-[13px] font-bold uppercase tracking-[0.08em] ${
+                  className={`border px-2 py-0.5 text-[13px] font-semibold rounded-control ${
                     e.severity === 'high'
                       ? 'border-danger text-danger'
                       : e.severity === 'medium'
@@ -231,7 +231,7 @@ export function SecurityPanel({
           <span className="ml-4 shrink-0 text-[13px] text-accent">Download</span>
         </a>
 
-        <div className="border border-danger p-4">
+        <div className="border border-danger p-4 rounded-control">
           <p className="text-[13px] text-ink">Delete everything</p>
           <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
             Permanently removes every entry, message, summary and log row, then deletes your
@@ -253,7 +253,7 @@ export function SecurityPanel({
               type="button"
               onClick={handleDelete}
               disabled={confirm !== 'DELETE EVERYTHING' || deleting}
-              className="brut-press-sm border-2 border-danger bg-surface px-3.5 py-2 text-[13px] font-bold uppercase tracking-wide text-danger transition-opacity disabled:opacity-30"
+              className="brut-press-sm border border-danger bg-surface px-3.5 py-2 text-[13px] font-semibold text-danger transition-opacity disabled:opacity-30 rounded-control"
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </button>
