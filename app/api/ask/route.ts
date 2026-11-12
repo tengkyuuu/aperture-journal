@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 
 import { requireUid } from '@/lib/server/auth';
 import { embed, estimateTokens, streamGroundedAnswer } from '@/lib/server/ai';
@@ -92,7 +92,23 @@ export async function POST(req: Request) {
      * still spent tokens, and the Security page promises that every such call
      * is recorded. Cancelling used to skip this entirely.
      */
+    // Serverless platforms freeze the function the moment the client goes
+    // away, which is exactly when a stopped answer still has its ledger row to
+    // write. Registering after() while the request is still live keeps the
+    // function running until finish() has settled (capped, so a stream that
+    // never ends cannot hold it open). On Vercel this is waitUntil().
+    let markSettled!: () => void;
+    const settledP = new Promise<void>((r) => (markSettled = r));
+    after(() => Promise.race([settledP, new Promise<void>((r) => setTimeout(r, 20_000))]));
     async function finish(reason: 'complete' | 'stopped') {
+      try {
+        await record(reason);
+      } finally {
+        markSettled();
+      }
+    }
+
+    async function record(reason: 'complete' | 'stopped') {
       if (settled) return;
       settled = true;
 

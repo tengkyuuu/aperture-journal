@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 
 import { requireUid } from '@/lib/server/auth';
@@ -128,7 +129,23 @@ export async function POST(req: Request) {
      * recorded here." So `cancel()` calls this too.
      */
     let settled = false;
+    // Serverless platforms freeze the function the moment the client goes
+    // away, which is exactly when a stopped answer still has its ledger row to
+    // write. Registering after() while the request is still live keeps the
+    // function running until finish() has settled (capped, so a stream that
+    // never ends cannot hold it open). On Vercel this is waitUntil().
+    let markSettled!: () => void;
+    const settledP = new Promise<void>((r) => (markSettled = r));
+    after(() => Promise.race([settledP, new Promise<void>((r) => setTimeout(r, 20_000))]));
     async function finish(reason: 'complete' | 'stopped') {
+      try {
+        await record(reason);
+      } finally {
+        markSettled();
+      }
+    }
+
+    async function record(reason: 'complete' | 'stopped') {
       if (settled) return;
       settled = true;
 
